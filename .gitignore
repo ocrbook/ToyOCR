@@ -1,0 +1,13 @@
+datasets/
+output/
+exp_results/
+models/
+*.pth
+*.pyth
+*.jpg
+*.pyc
+.vscode
+.idea
+results.txt
+__pycache__
+
