@@ -5,7 +5,6 @@ import torch
 import numpy as np
 from shapely.geometry import Polygon
 import pyclipper
-from detectron2.structures import Instances, RotatedBoxes
 
 
 class ToyDetDecoder(object):
@@ -34,7 +33,7 @@ class ToyDetDecoder(object):
 
         return boxes, scores
 
-    def decode_batch(self,scale_xys, heats, down_scale=4):
+    def decode_batch(self, scale_xys, heats, down_scale=4):
 
         bboxes_list = []
         scores_list = []
@@ -44,7 +43,7 @@ class ToyDetDecoder(object):
             scale_x, scale_y = scale_xys[i]
             bboxes, scores = self.boxes_from_bitmap(
                 torch.squeeze(heats[i, :, :, :]))
-            if not isinstance(bboxes,list):
+            if not isinstance(bboxes, list):
                 bboxes[:, 0::2] = bboxes[:, 0::2] * \
                     scale_x * down_scale
                 bboxes[:, 1::2] = bboxes[:, 1::2] * \
@@ -126,12 +125,10 @@ class ToyDetDecoder(object):
         clip_h, clip_w = bitmap.shape
 
         pred = pred.cpu().detach().numpy()
-        
-        cv2.imshow("mask",(bitmap * 255).astype(np.uint8))
-        cv2.waitKey(0)
-        
+
         height, width = bitmap.shape
-        _,mask =cv2.threshold((bitmap * 255).astype(np.uint8),self.box_thresh*255,255,cv2.THRESH_BINARY)
+        _, mask = cv2.threshold(
+            (bitmap * 255).astype(np.uint8), self.box_thresh*255, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(
             mask,
             cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
@@ -149,8 +146,8 @@ class ToyDetDecoder(object):
             score = self.box_score_fast(pred, points.reshape(-1, 2))
             # if self.box_thresh > score:
             #     continue
-            if score<0.005:
-                continue 
+            if score < 0.005:
+                continue
             box = self.unclip(points).reshape(-1, 1, 2)
             box, sside = self.get_mini_boxes(box)
             if sside < self.min_size + 2:
@@ -159,7 +156,7 @@ class ToyDetDecoder(object):
 
             box[:, 0] = np.clip(box[:, 0], 0, clip_w)
             box[:, 1] = np.clip(box[:, 1], 0, clip_h)
-            
+
             boxes.append(box)
 
             scores.append(score)

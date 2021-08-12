@@ -19,8 +19,9 @@ from detectron2.evaluation.evaluator import DatasetEvaluator
 import glob
 import shutil
 from shapely.geometry import Polygon, LinearRing
-from . import text_eval_script
+from evaluation import text_eval_script
 import zipfile
+from evaluation import geometry 
 
 
 class TextEvaluator(DatasetEvaluator):
@@ -37,21 +38,21 @@ class TextEvaluator(DatasetEvaluator):
         self._logger = logging.getLogger(__name__)
 
         self._metadata = MetadataCatalog.get(dataset_name)
-        if not hasattr(self._metadata, "json_file"):
-            raise AttributeError(
-                f"json_file was not found in MetaDataCatalog for '{dataset_name}'."
-            )
+        # if not hasattr(self._metadata, "json_file"):
+        #     raise AttributeError(
+        #         f"json_file was not found in MetaDataCatalog for '{dataset_name}'."
+        #     )
 
-        json_file = PathManager.get_local_path(self._metadata.json_file)
-        with contextlib.redirect_stdout(io.StringIO()):
-            self._coco_api = COCO(json_file)
+        # json_file = PathManager.get_local_path(self._metadata.json_file)
+        # with contextlib.redirect_stdout(io.StringIO()):
+        #     self._coco_api = COCO(json_file)
 
         # use dataset_name to decide eval_gt_path
-        if  "icdar" in dataset_name:
-            self._text_eval_gt_path="datasets/evaluation/gt_icdar.zip"
+        if "icdar" in dataset_name:
+            self._text_eval_gt_path = "datasets/evaluation/gt.zip"
             self._word_spotting = False
-        
-        self._text_eval_confidence = cfg.MODEL.FCOS.INFERENCE_TH_TEST
+
+        self._text_eval_confidence = 0.45
 
     def reset(self):
         self._predictions = []
@@ -61,9 +62,10 @@ class TextEvaluator(DatasetEvaluator):
             prediction = {"image_id": input["image_id"]}
 
             instances = output["instances"].to(self._cpu_device)
-            prediction["instances"] = instances_to_coco_json(instances, input["image_id"])
+            prediction["instances"] = instances_to_coco_json(
+                instances, input["image_id"])
             self._predictions.append(prediction)
-
+        
     def to_eval_format(self, file_path, temp_dir="temp_det_results", cf_th=0.5):
         def fis_ascii(s):
             a = (ord(c) < 128 for c in s)
@@ -73,7 +75,7 @@ class TextEvaluator(DatasetEvaluator):
             a = [c for c in s if ord(c) < 128]
             outa = ''
             for i in a:
-                outa +=i
+                outa += i
             return outa
 
         with open(file_path, 'r') as f:
@@ -84,19 +86,23 @@ class TextEvaluator(DatasetEvaluator):
                         outstr = '{}: '.format(data[ix]['image_id'])
                         xmin = 1000000
                         ymin = 1000000
-                        xmax = 0 
+                        xmax = 0
                         ymax = 0
                         for i in range(len(data[ix]['polys'])):
-                            outstr = outstr + str(int(data[ix]['polys'][i][0])) +','+str(int(data[ix]['polys'][i][1])) +','
+                            outstr = outstr + \
+                                str(int(data[ix]['polys'][i][0])) + ',' + \
+                                str(int(data[ix]['polys'][i][1])) + ','
                         ass = ''
-                        if len(ass)>=0: # 
-                            outstr = outstr + str(round(data[ix]['score'], 3)) +',####'+ass+'\n'	
+                        if len(ass) >= 0:
+                            outstr = outstr + \
+                                str(round(data[ix]['score'], 3)
+                                    ) + ',####'+ass+'\n'
                             f2.writelines(outstr)
                 f2.close()
         dirn = temp_dir
-        lsc = [cf_th] 
+        lsc = [cf_th]
         fres = open('temp_all_det_cors.txt', 'r').readlines()
-        for isc in lsc:	
+        for isc in lsc:
             if not os.path.isdir(dirn):
                 os.mkdir(dirn)
 
@@ -130,28 +136,31 @@ class TextEvaluator(DatasetEvaluator):
             fout = open(out, 'w')
             for iline, line in enumerate(fin):
                 ptr = line.strip().split(',####')
-                rec  = ptr[1]
+                rec = ptr[1]
                 cors = ptr[0].split(',')
-                assert(len(cors) %2 == 0), 'cors invalid.'
-                pts = [(int(cors[j]), int(cors[j+1])) for j in range(0,len(cors),2)]
+                assert(len(cors) % 2 == 0), 'cors invalid.'
+                pts = [(int(cors[j]), int(cors[j+1]))
+                       for j in range(0, len(cors), 2)]
                 try:
                     pgt = Polygon(pts)
                 except Exception as e:
                     print(e)
-                    print('An invalid detection in {} line {} is removed ... '.format(i, iline))
+                    print(
+                        'An invalid detection in {} line {} is removed ... '.format(i, iline))
                     continue
-                
+
                 if not pgt.is_valid:
-                    print('An invalid detection in {} line {} is removed ... '.format(i, iline))
+                    print(
+                        'An invalid detection in {} line {} is removed ... '.format(i, iline))
                     continue
-                    
+
                 pRing = LinearRing(pts)
                 if pRing.is_ccw:
                     pts.reverse()
                 outstr = ''
                 for ipt in pts[:-1]:
-                    outstr += (str(int(ipt[0]))+','+ str(int(ipt[1]))+',')
-                outstr += (str(int(pts[-1][0]))+','+ str(int(pts[-1][1])))
+                    outstr += (str(int(ipt[0]))+',' + str(int(ipt[1]))+',')
+                outstr += (str(int(pts[-1][0]))+',' + str(int(pts[-1][1])))
                 outstr = outstr+',####' + rec
                 fout.writelines(outstr+'\n')
             fout.close()
@@ -171,7 +180,7 @@ class TextEvaluator(DatasetEvaluator):
         shutil.rmtree(origin_file)
         shutil.rmtree(output_file)
         return "det.zip"
-    
+
     def evaluate_with_official_code(self, result_path, gt_path):
         return text_eval_script.text_eval_main(det_file=result_path, gt_file=gt_path, is_word_spotting=self._word_spotting)
 
@@ -187,10 +196,12 @@ class TextEvaluator(DatasetEvaluator):
             predictions = self._predictions
 
         if len(predictions) == 0:
-            self._logger.warning("[COCOEvaluator] Did not receive valid predictions.")
+            self._logger.warning(
+                "[COCOEvaluator] Did not receive valid predictions.")
             return {}
 
-        coco_results = list(itertools.chain(*[x["instances"] for x in predictions]))
+        coco_results = list(itertools.chain(
+            *[x["instances"] for x in predictions]))
         PathManager.mkdirs(self._output_dir)
 
         file_path = os.path.join(self._output_dir, "text_results.json")
@@ -200,12 +211,13 @@ class TextEvaluator(DatasetEvaluator):
             f.flush()
 
         self._results = OrderedDict()
-        
+
         # eval text
         temp_dir = "temp_det_results/"
         self.to_eval_format(file_path, temp_dir, self._text_eval_confidence)
         result_path = self.sort_detection(temp_dir)
-        text_result = self.evaluate_with_official_code(result_path, self._text_eval_gt_path)
+        text_result = self.evaluate_with_official_code(
+            result_path, self._text_eval_gt_path)
         os.remove(result_path)
 
         # parse
@@ -213,34 +225,30 @@ class TextEvaluator(DatasetEvaluator):
         for task in ("e2e_method", "det_only_method"):
             result = text_result[task]
             groups = re.match(template, result).groups()
-            self._results[groups[0]] = {groups[i*2+1]: float(groups[(i+1)*2]) for i in range(3)}
+            self._results[groups[0]] = {
+                groups[i*2+1]: float(groups[(i+1)*2]) for i in range(3)}
 
         return copy.deepcopy(self._results)
 
 
 def instances_to_coco_json(instances, img_id):
-    
-    results=list()
+
+    results = list()
     num_instances = len(instances)
-    if num_instances== 0:
+    if num_instances == 0:
         return []
-    
-    scores =instances.scores.tolist()
-    rboxes=instances.rboxes.numpy()
-    
-    for rbox,score in zip(rboxes,scores):
-        result={
-            "image_id":img_id,
-            "category_id":1,
-            "polys":rboxes,
-            "score":score
+
+    scores = instances.scores.tolist()
+    rboxes = instances.rboxes
+
+    for rbox, score in zip(rboxes, scores):
+        rbox=rbox.tolist()
+        result = {
+            "image_id": img_id,
+            "category_id": 1,
+            "polys": geometry.choose_best_begin_point(rbox),
+            "score": score
         }
-    results.append(result)
-    
-    return results 
+        results.append(result)
 
-
-
-
-
-            
+    return results

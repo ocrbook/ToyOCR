@@ -1,3 +1,4 @@
+from numpy.lib.arraysetops import isin
 import torch
 from torch.nn import functional as F
 from enum import Enum
@@ -48,8 +49,7 @@ def batch_padding(batch_images,
 
     return batched_imgs
 
-def get_labels(classes,scores):
-    labels = _create_text_labels(classes, scores, self.metadata.get("thing_classes", None))
+ 
 
 
 def create_text_labels(classes, scores, class_names, is_crowd=None):
@@ -94,23 +94,4 @@ class Color(Enum):
     black = (0, 0, 0)
 
 
-def color_val(color):
-    if is_str(color):
-        return Color[color].value
-    elif isinstance(color, Color):
-        return color.value
-    elif isinstance(color, tuple):
-        assert len(color) == 3
-        for channel in color:
-            assert 0 <= channel <= 255
-        return color
-    elif isinstance(color, int):
-        assert 0 <= color <= 255
-        return color, color, color
-    elif isinstance(color, np.ndarray):
-        assert color.ndim == 1 and color.size == 3
-        assert np.all((color >= 0) & (color <= 255))
-        color = color.astype(np.uint8)
-        return tuple(color)
-    else:
-        raise TypeError(f'Invalid type for color: {type(color)}')
+

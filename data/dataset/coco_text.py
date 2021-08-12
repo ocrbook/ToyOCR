@@ -14,6 +14,14 @@ CLASS_NAMES = ("text",)
 def load_coco_text_instances(json_file, image_root, class_names):
     """
     Load  detection annotations to Detectron2 format.
+    
+    Args:
+        json_file(str): json file path
+        image_root(str): image files root
+        class_names(list): class name list
+    
+    Returns:
+        dict: all annotations
     """
     # Needs to read many small annotation files. Makes sense at local
 

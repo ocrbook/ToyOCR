@@ -23,6 +23,7 @@ from configs import add_textnet_config
 from modeling import * 
 from detectron2.modeling import build_model
 
+
 from data import DatasetMapper, build_detection_train_loader
 from torchtools.optim import RangerLars
 from solver import WarmupCosineAnnealingLR
@@ -255,6 +256,8 @@ class Trainer(DefaultTrainer):
         """
         If your want to do something with the data, you can wrap the dataloader.
         """
+        return 
+    
         data = next(self._data_loader_iter)
         data_time = time.perf_counter() - start
 
@@ -281,7 +284,9 @@ class Trainer(DefaultTrainer):
         wrap the optimizer with your custom `step()` method.
         """
         metrics_dict = loss_dict
-        if detectron2.__version__<="0.2.1":
+        if detectron2.__version__=="0.1.3":
+            self._write_metrics(metrics_dict)
+        elif detectron2.__version__<="0.2.1":
             self._write_metrics(metrics_dict,data_time)
         else:
             self._write_metrics(metrics_dict)
@@ -399,15 +404,8 @@ class Trainer(DefaultTrainer):
             cfg.SOLVER.IMS_PER_BATCH % old_world_size == 0
         ), "Invalid REFERENCE_WORLD_SIZE in config!"
         scale = num_workers / old_world_size
-        bs = cfg.SOLVER.IMS_PER_BATCH = int(
-            round(cfg.SOLVER.IMS_PER_BATCH * scale))
-        lr = cfg.SOLVER.BASE_LR = cfg.SOLVER.BASE_LR * scale
-        max_iter = cfg.SOLVER.MAX_ITER = int(
-            round(cfg.SOLVER.MAX_ITER / scale))
-        warmup_iter = cfg.SOLVER.WARMUP_ITERS = int(
-            round(cfg.SOLVER.WARMUP_ITERS / scale))
-        cfg.SOLVER.STEPS = tuple(int(round(s / scale))
-                                 for s in cfg.SOLVER.STEPS)
+        bs = cfg.SOLVER.IMS_PER_BATCH = int(        print(dataset_name)
+)
         cfg.TEST.EVAL_PERIOD = int(round(cfg.TEST.EVAL_PERIOD / scale))
         cfg.SOLVER.CHECKPOINT_PERIOD = int(
             round(cfg.SOLVER.CHECKPOINT_PERIOD / scale))

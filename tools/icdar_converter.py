@@ -4,8 +4,11 @@ import os.path as osp
 from functools import partial
 from fvcore.common.file_io import PathHandler, PathManager
 import cv2 
+import sys 
 import numpy as np
 from shapely.geometry import Polygon
+
+sys.path.insert(0, '.')
 
 from utils import convert_annotations, drop_orientation, is_not_png
 
