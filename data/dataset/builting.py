@@ -28,7 +28,7 @@ def register_text_detection(root):
         ['text',]),
         (
         "icdar_val",
-        "datasets/icdar/val.json",
+        "datasets/icdar/val_filter_curve.json",
         "datasets/icdar/images/",
         ['text',])
         ]

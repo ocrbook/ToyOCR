@@ -71,6 +71,7 @@ if __name__ == "__main__":
                 txt.write(line+'\n')
             classes = cls.tolist()
             labels = [class_names[int(c)] for c in classes]
+            label_text=""
             for bbox, label, score in zip(boxes, labels, scores):
                 if score < 0.35:
                     continue

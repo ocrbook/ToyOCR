@@ -223,8 +223,20 @@ def get_tl_line_values_gt(line, LTRB=True, with_transcription=False, with_confid
             raise('not implemented')
 
         #points=geometry.choose_best_begin_point(points)
+        def reverse_points(points):
+            xs=points[0::2]
+            ys=points[1::2]
+            
+            points=[xs[3],ys[3],xs[2],ys[2],xs[1],ys[1],xs[0],ys[0]]
+            return points
+        
+        
         validate_clockwise_points(points)
-       
+        
+            
+            
+            
+           
 
         if (imWidth > 0 and imHeight > 0):
             for ip in range(0, len(points), 2):
@@ -349,6 +361,7 @@ def validate_clockwise_points(points):
     except:
         assert(0), ('not a valid polygon', pts)
     # The polygon should be valid.
+    
     if not pdet.is_valid:
         assert(0), ('polygon has intersection sides', pts)
     pRing = LinearRing(pts)

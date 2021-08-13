@@ -21,7 +21,6 @@ import shutil
 from shapely.geometry import Polygon, LinearRing
 from evaluation import text_eval_script
 import zipfile
-from evaluation import geometry 
 
 
 class TextEvaluator(DatasetEvaluator):
@@ -49,10 +48,10 @@ class TextEvaluator(DatasetEvaluator):
 
         # use dataset_name to decide eval_gt_path
         if "icdar" in dataset_name:
-            self._text_eval_gt_path = "datasets/evaluation/gt.zip"
+            self._text_eval_gt_path = "datasets/evaluation/icdar_gt.zip"
             self._word_spotting = False
 
-        self._text_eval_confidence = 0.45
+        self._text_eval_confidence = 0
 
     def reset(self):
         self._predictions = []
@@ -246,7 +245,7 @@ def instances_to_coco_json(instances, img_id):
         result = {
             "image_id": img_id,
             "category_id": 1,
-            "polys": geometry.choose_best_begin_point(rbox),
+            "polys": rbox,
             "score": score
         }
         results.append(result)

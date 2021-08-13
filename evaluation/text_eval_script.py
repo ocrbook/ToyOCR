@@ -272,7 +272,7 @@ def evaluate_method(gt_file_path, subm_file_path, evaluation_params):
     arrGlobalMatches = []
 
     for res_file in gt:
-        # print('resgt', res_file)
+        print('resgt', res_file)
         gtFile = rrc_evaluation_funcs.decode_utf8(gt[res_file])
         if (gtFile is None):
             raise Exception("The file %s is not UTF-8" % res_file)
