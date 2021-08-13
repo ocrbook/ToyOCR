@@ -302,7 +302,7 @@ def evaluate_method(gt_file_path, subm_file_path, evaluation_params):
 
         points_list, _, transcriptions_list = rrc_evaluation_funcs.get_tl_line_values_from_file_contents(
             gtFile, evaluation_params['CRLF'], evaluation_params['LTRB'], True, False)
-        print(points_list,transcriptions_list)
+
 
         for n in range(len(points_list)):
             points = points_list[n]
@@ -331,14 +331,16 @@ def evaluate_method(gt_file_path, subm_file_path, evaluation_params):
                 gt_dont_care_pols_num.append(len(gt_pols)-1)
             if det_only_dont_care:
                 det_only_gt_dont_care_pols_num.append(len(gt_pols)-1)
-
+        res_file="00"+res_file
+        
         if res_file in subm:
 
             detFile = rrc_evaluation_funcs.decode_utf8(subm[res_file])
 
             points_list, confidences_list, transcriptions_list = rrc_evaluation_funcs.get_tl_line_values_from_file_contents_det(
                 detFile, evaluation_params['CRLF'], evaluation_params['LTRB'], True, evaluation_params['CONFIDENCES'])
-
+            
+            
             for n in range(len(points_list)):
                 points = points_list[n]
                 transcription = transcriptions_list[n]
@@ -375,6 +377,7 @@ def evaluate_method(gt_file_path, subm_file_path, evaluation_params):
                                 len(det_pols)-1)
                             break
 
+            
             if len(gt_pols) > 0 and len(det_pols) > 0:
                 # Calculate IoU and precision matrixs
                 output_shape = [len(gt_pols), len(det_pols)]
