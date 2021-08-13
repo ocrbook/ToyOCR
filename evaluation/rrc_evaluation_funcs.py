@@ -8,6 +8,7 @@ import re
 import zipfile
 import json
 import sys
+from evaluation import geometry
 sys.path.append('./')
 
 
@@ -125,13 +126,13 @@ def validate_lines_in_file(fileName, file_contents, CRLF=True, LTRB=True, with_t
     lines = utf8File.split("\r\n" if CRLF else "\n")
     for line in lines:
         line = line.replace("\r", "").replace("\n", "")
-        if(line != ""):
-            try:
-                validate_tl_line(line, LTRB, with_transcription,
-                                 with_confidence, imWidth, imHeight)
-            except Exception as e:
-                raise Exception(("Line in sample not valid. Sample: %s Line: %s Error: %s" % (
-                    fileName, line, str(e))).encode('utf-8', 'replace'))
+        # if(line != ""):
+        #     try:
+        #         validate_tl_line(line, LTRB, with_transcription,
+        #                          with_confidence, imWidth, imHeight)
+        #     except Exception as e:
+        #         raise Exception(("Line in sample not valid. Sample: %s Line: %s Error: %s" % (
+        #             fileName, line, str(e))).encode('utf-8', 'replace'))
 
 
 def validate_tl_line_gt(line, LTRB=True, with_transcription=True, with_confidence=True, imWidth=0, imHeight=0):
@@ -221,15 +222,9 @@ def get_tl_line_values_gt(line, LTRB=True, with_transcription=False, with_confid
         else:
             raise('not implemented')
 
-        try:
-            validate_clockwise_points(points)
-        except: 
-            points = [points[0], points[1],
-                      points[6], points[7],
-                      points[4], points[5],
-                      points[2], points[3]]
-            print('clockwise => ', points)
-            validate_clockwise_points(points)
+        #points=geometry.choose_best_begin_point(points)
+        validate_clockwise_points(points)
+       
 
         if (imWidth > 0 and imHeight > 0):
             for ip in range(0, len(points), 2):
@@ -289,15 +284,9 @@ def get_tl_line_values(line, LTRB=True, with_transcription=False, with_confidenc
             raise('not implemented')
 
         # print('det clock wise')
-        try:
-            validate_clockwise_points(points)
-        except: 
-            points = [points[0], points[1],
-                      points[6], points[7],
-                      points[4], points[5],
-                      points[2], points[3]]
-            print('clockwise => ', points)
-            validate_clockwise_points(points)
+        #points=geometry.choose_best_begin_point(points)
+        validate_clockwise_points(points)
+        
 
         if (imWidth > 0 and imHeight > 0):
             for ip in range(0, len(points), 2):

@@ -11,3 +11,6 @@ models/
 results.txt
 __pycache__
 
+det.zip
+val
+*.zip 

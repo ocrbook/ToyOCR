@@ -45,3 +45,9 @@ def choose_best_begin_point(points):
         # if force_flag != 0:
         #    print("choose one direction!")
     return combinate[force_flag]
+
+
+
+a=[[60.0, 746.0], [0.0, 742.0], [209.0, 762.0], [115.0, 757.0]]
+
+print(choose_best_begin_point(a))
