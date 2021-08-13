@@ -30,7 +30,7 @@ def order_points_clockwise(pts, reverse=False):
     rightMost = rightMost[np.argsort(rightMost[:, 1]), :]
     (tr, br) = rightMost
 
-    ret = [tl, tr, br, bl]
+    ret = [tl.tolist(), tr.tolist(), br.tolist(), bl.tolist()]
 
     if reverse:
         ret = ret[::-1]

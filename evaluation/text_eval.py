@@ -21,6 +21,7 @@ import shutil
 from shapely.geometry import Polygon, LinearRing
 from evaluation import text_eval_script
 import zipfile
+from evaluation import geometry
 
 
 class TextEvaluator(DatasetEvaluator):
@@ -245,7 +246,7 @@ def instances_to_coco_json(instances, img_id):
         result = {
             "image_id": img_id,
             "category_id": 1,
-            "polys": rbox,
+            "polys":geometry.order_points_clockwise(rbox),
             "score": score
         }
         results.append(result)

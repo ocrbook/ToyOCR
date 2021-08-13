@@ -62,7 +62,7 @@ def load_zip_file(file, fileNameRegExp='', allEntries=False):
     for name in archive.namelist():
         addFile = True
         keyName = name
-        
+
         if fileNameRegExp != "":
             m = re.match(fileNameRegExp, name)
             if m == None:
@@ -222,21 +222,19 @@ def get_tl_line_values_gt(line, LTRB=True, with_transcription=False, with_confid
         else:
             raise('not implemented')
 
-        #points=geometry.choose_best_begin_point(points)
+        # points=geometry.choose_best_begin_point(points)
         def reverse_points(points):
-            xs=points[0::2]
-            ys=points[1::2]
-            
-            points=[xs[3],ys[3],xs[2],ys[2],xs[1],ys[1],xs[0],ys[0]]
+            xs = points[0::2]
+            ys = points[1::2]
+
+            points = [xs[3], ys[3], xs[2], ys[2], xs[1], ys[1], xs[0], ys[0]]
             return points
-        
-        
-        validate_clockwise_points(points)
-        
-            
-            
-            
-           
+
+        try:
+            validate_clockwise_points(points)
+        except Exception as e:
+            points = reverse_points(points)
+            validate_clockwise_points(points)
 
         if (imWidth > 0 and imHeight > 0):
             for ip in range(0, len(points), 2):
@@ -296,9 +294,8 @@ def get_tl_line_values(line, LTRB=True, with_transcription=False, with_confidenc
             raise('not implemented')
 
         # print('det clock wise')
-        #points=geometry.choose_best_begin_point(points)
+        # points=geometry.choose_best_begin_point(points)
         validate_clockwise_points(points)
-        
 
         if (imWidth > 0 and imHeight > 0):
             for ip in range(0, len(points), 2):
@@ -361,7 +358,7 @@ def validate_clockwise_points(points):
     except:
         assert(0), ('not a valid polygon', pts)
     # The polygon should be valid.
-    
+
     if not pdet.is_valid:
         assert(0), ('polygon has intersection sides', pts)
     pRing = LinearRing(pts)
@@ -450,10 +447,10 @@ def main_evaluation(p, det_file, gt_file, default_evaluation_params_fn, validate
     eval_params = default_evaluation_params_fn()
     if 'p' in p.keys():
         eval_params.update(p['p'] if isinstance(p['p'], dict)
-                          else json.loads(p['p'][1:-1]))
+                           else json.loads(p['p'][1:-1]))
 
     res_dict = {'calculated': True, 'Message': '',
-               'method': '{}', 'per_sample': '{}'}
+                'method': '{}', 'per_sample': '{}'}
     # try:
     validate_data_fn(p['g'], p['s'], eval_params)
     eval_data = evaluate_method_fn(p['g'], p['s'], eval_params)
@@ -468,7 +465,8 @@ def main_evaluation(p, det_file, gt_file, default_evaluation_params_fn, validate
             os.makedirs(p['o'])
 
         results_output_name = p['o'] + '/results.zip'
-        outZip = zipfile.ZipFile(results_output_name, mode='w', allowZip64=True)
+        outZip = zipfile.ZipFile(
+            results_output_name, mode='w', allowZip64=True)
 
         del res_dict['per_sample']
         if 'output_items' in res_dict.keys():
