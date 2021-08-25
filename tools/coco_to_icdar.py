@@ -11,7 +11,6 @@ from shapely.geometry import Polygon, geo
 from pycocotools.coco import COCO
 import json
 import os
-from evaluation import geometry
 import numpy as np
 
 sys.path.insert(0, '.')
@@ -24,7 +23,6 @@ def convert_coco_to_icdar(img_info, anno_infos, out_dir):
     for anno in anno_infos:
         points = anno["text"]["points"]
         if len(points) > 4:
-            print(img_info["file_name"])
             return
     
 
@@ -71,18 +69,20 @@ def main():
     coco = COCO(coco_path)
 
     img_ids = coco.imgs.keys()
-
+    cnt=0
     for img_id in img_ids:
 
         img_infos = coco.loadImgs([img_id])
-        
-        image_path=os.path.join(image_root,img_infos[0]["image_path"])
+        image_path=os.path.join(image_root,img_infos[0]["file_name"])
         if not os.path.exists(image_path):
+            print(image_path)
+            cnt+=1
             continue    
 
         annIds = coco.getAnnIds(imgIds=img_infos[0]['id'])
         anno_infos = coco.loadAnns(annIds)
         convert_coco_to_icdar(img_infos[0], anno_infos, out_dir)
+    print("count non exist image numbers:",cnt)
     print("Done!!!")
 
 
