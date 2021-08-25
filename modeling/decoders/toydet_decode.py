@@ -10,11 +10,11 @@ import pyclipper
 class ToyDetDecoder(object):
 
     thresh = 0.6
-    box_thresh = 0.5
+    box_thresh = 0.6
     max_candidates = 100
     dest = 'binary'
 
-    def __init__(self, thresh=0.3, box_thresh=0.55, **kwargs):
+    def __init__(self, thresh=0.3, box_thresh=0.75, **kwargs):
         self.min_size = 3
         self.scale_ratio = 0.4
 
@@ -131,7 +131,7 @@ class ToyDetDecoder(object):
             (bitmap * 255).astype(np.uint8), self.box_thresh*255, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(
             mask,
-            cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         num_contours = min(len(contours), max_candidates)
         boxes = []
         scores = []
@@ -146,7 +146,7 @@ class ToyDetDecoder(object):
             score = self.box_score_fast(pred, points.reshape(-1, 2))
             # if self.box_thresh > score:
             #     continue
-            if score < 0.005:
+            if score < 0.001:
                 continue
             box = self.unclip(points).reshape(-1, 1, 2)
             box, sside = self.get_mini_boxes(box)
