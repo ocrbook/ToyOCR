@@ -20,12 +20,13 @@ sys.path.insert(0, '.')
 def convert_coco_to_icdar(img_info, anno_infos, out_dir):
     file_name = img_info["id"]
     txt_file_name = os.path.join(out_dir, str(file_name) + ".txt")
-
+    
     for anno in anno_infos:
         points = anno["text"]["points"]
         if len(points) > 4:
             print(img_info["file_name"])
             return
+    
 
     with open(txt_file_name, "w", encoding='utf-8') as fp:
         for anno in anno_infos:
@@ -46,6 +47,7 @@ def parse_args():
         description='Convert COCO format to Icdar2015 or Icdar2017 annotations format'
     )
     parser.add_argument('coco_path', help='coco root path')
+    parser.add_argument("image_root",help="image root")
     parser.add_argument('-o', '--out-dir', help='output path')
     parser.add_argument('-d', '--dataset', help='coco')
     parser.add_argument(
@@ -62,6 +64,7 @@ def parse_args():
 def main():
     args = parse_args()
     coco_path = args.coco_path
+    image_root = args.image_root
     out_dir = args.out_dir
     PathManager.mkdirs(out_dir)
 
@@ -72,6 +75,10 @@ def main():
     for img_id in img_ids:
 
         img_infos = coco.loadImgs([img_id])
+        
+        image_path=os.path.join(image_root,img_infos[0]["image_path"])
+        if not os.path.exists(image_path):
+            continue    
 
         annIds = coco.getAnnIds(imgIds=img_infos[0]['id'])
         anno_infos = coco.loadAnns(annIds)
