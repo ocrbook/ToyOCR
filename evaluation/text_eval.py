@@ -19,7 +19,7 @@ from detectron2.evaluation.evaluator import DatasetEvaluator
 import glob
 import shutil
 from shapely.geometry import Polygon, LinearRing
-from evaluation import text_eval_script
+from evaluation import scripts as text_eval_script
 import zipfile
 from evaluation import geometry
 
