@@ -4,7 +4,7 @@ import json
 
 
 gt_path="../datasets/icdar/val.json"
-pred_path="../exp_results/toydet_exp_R50/inference/text_results.json"
+pred_path="../exp_results/final/inference/text_results.json"
 
 with open(gt_path) as fp:
     gt_data=json.load(fp)
@@ -59,9 +59,16 @@ for img_id,file_name in gt_image_maps.items():
         first =False
     img=cv2.imread(image_path)
     for pred_anno in pred_annos:
-        polys=pred_anno["polys"]     
-        polys=np.array(polys,np.int)
-        img=cv2.polylines(img, [polys], True, color=(255, 255, 155), thickness=2)
+        pred_polys=pred_anno["polys"]     
+        pred_polys=np.array(pred_polys,np.int)
+        img=cv2.polylines(img, [pred_polys], True, color=(255, 255, 155), thickness=2)
+        
+    for gt_anno in gt_annos:
+        print(gt_anno)
+        gt_polys=gt_anno["text"]["points"]
+        gt_polys=np.array(gt_polys,np.int)
+        img= cv2.polylines(img, [gt_polys], True, color=(0, 0, 255), thickness=2)
+        
     cnt +=1
     print(img.shape)
     cv2.imwrite(os.path.join("results",file_name),img)

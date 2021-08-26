@@ -20,6 +20,8 @@ from torch.nn import functional as F
 
 __all__ = ["ToyDet"]
 
+DEBUG= False
+
 
 @META_ARCH_REGISTRY.register()
 class ToyDet(nn.Module):
@@ -67,12 +69,31 @@ class ToyDet(nn.Module):
         Returns:
             dict[str: Tensor]:
         """
-
+        copy_imgs=batched_inputs.copy()
+        
         images = self.preprocess_image(batched_inputs)
 
         if not self.training:
             # return self.inference(images)
-            return self.inference(images, batched_inputs)
+            rets= self.inference(images, batched_inputs)
+            
+            for batch,result in zip(copy_imgs,rets):
+                img=batch["image"]
+               
+                img=img.cpu().detach().numpy().transpose((1,2,0))
+                
+                img=img[:,:,::-1]
+                img=img.astype(np.int8)
+                 # img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+                instances=result["instances"]
+                rboxes=instances.rboxes
+                
+                for rbox in rboxes:
+                    rbox=np.array(rbox,np.int)
+                    img=cv2.polylines(img, [rbox], True, color=(0, 0, 155), thickness=2)
+                # cv2.imshow("hi",img)
+                # cv2.waitKey(0)
+            return rets 
 
         image_shape = images.tensor.shape[-2:]
 
@@ -110,7 +131,7 @@ class ToyDet(nn.Module):
             result.scores = scores
 
             results.append({"instances": result})
-
+       
         return results
 
     def preprocess_image(self, batched_inputs):

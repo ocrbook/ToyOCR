@@ -14,8 +14,8 @@ class ToyDetDecoder(object):
     max_candidates = 100
     dest = 'binary'
 
-    def __init__(self, thresh=0.3, box_thresh=0.75, **kwargs):
-        self.min_size = 3
+    def __init__(self, thresh=0.3, box_thresh=0.7, **kwargs):
+        self.min_size = 1
         self.scale_ratio = 0.4
 
         self.thresh = thresh
@@ -125,10 +125,21 @@ class ToyDetDecoder(object):
         clip_h, clip_w = bitmap.shape
 
         pred = pred.cpu().detach().numpy()
-
+        # cv2.imshow("bitmap",bitmap*255)
         height, width = bitmap.shape
+        bitmap[np.where(bitmap>1.0)]=1.0
+        bitmap[np.where(bitmap<0.0)]=0.0
+        
+        
+        
         _, mask = cv2.threshold(
             (bitmap * 255).astype(np.uint8), self.box_thresh*255, 255, cv2.THRESH_BINARY)
+        # cv2.imshow("mask",mask)
+        
+        
+        kernel = np.ones((2, 2), np.uint8)
+        mask = cv2.erode(mask, kernel, iterations=1)
+        # cv2.imshow("mask2",mask)
         contours, _ = cv2.findContours(
             mask,
             cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -151,7 +162,7 @@ class ToyDetDecoder(object):
             box = self.unclip(points).reshape(-1, 1, 2)
             box, sside = self.get_mini_boxes(box)
             if sside < self.min_size + 2:
-                continue
+                 continue
             box = np.array(box)
 
             box[:, 0] = np.clip(box[:, 0], 0, clip_w)
@@ -175,9 +186,11 @@ class ToyDetDecoder(object):
         expanded = np.array(offset.Execute(distance))
         return expanded
 
-    def get_mini_boxes(self, contour):
-        bounding_box = cv2.minAreaRect(contour)
-        points = sorted(list(cv2.boxPoints(bounding_box)), key=lambda x: x[0])
+    def get_mini_boxes(self, contour, shrink=True):
+        rect = cv2.minAreaRect(contour)
+        # if shrink:
+        #     rect = (rect[0], (rect[1][0], rect[1][0]*0.9), rect[2])
+        points = sorted(list(cv2.boxPoints(rect)), key=lambda x: x[0])
 
         index_1, index_2, index_3, index_4 = 0, 1, 2, 3
         if points[1][1] > points[0][1]:
@@ -195,7 +208,7 @@ class ToyDetDecoder(object):
 
         box = [points[index_1], points[index_2],
                points[index_3], points[index_4]]
-        return box, min(bounding_box[1])
+        return box, min(rect[1])
 
     def box_score_fast(self, bitmap, _box):
         h, w = bitmap.shape[:2]
