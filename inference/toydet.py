@@ -142,14 +142,9 @@ if __name__ == "__main__":
     images = images[0:9]
     print(images)
     bs = 1
-    for i in tqdm(range(0, len(images), bs)):
-        images_rgb = [cv2.imread(j)[:, :, ::-1] for j in images[i:i + 1]]
-        img_names = [os.path.basename(j) for j in images[i:i+1 ]]
-        bboxes_list,scores_list = model.inference_on_images(images_rgb, K=100, max_size=640)
-        print(bboxes_list)
-        for k in range(len(bboxes_list)):
-            boxes = bboxes_list[k]
-            if isinstance(boxes,list):
+    from .text_eval import TextEvaluator
+from .text_eval_scripts import text_eval_main
+from . import rrc_evaluation_funcss,list):
                 continue 
             
             scores = scores_list[k]

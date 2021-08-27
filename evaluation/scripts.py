@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from collections import namedtuple
-import rrc_evaluation_funcs
+from . import rrc_evaluation_funcs
 import importlib
 import json
 import numpy as np
@@ -25,7 +25,7 @@ def default_evaluation_params():
         'IOU_CONSTRAINT': 0.5,
         'AREA_PRECISION_CONSTRAINT': 0.5,
         'GT_SAMPLE_NAME_2_ID': 'gt_img_([0-9]+).txt',
-        'DET_SAMPLE_NAME_2_ID': 'res_img_([0-9]+).txt',
+        'DET_SAMPLE_NAME_2_ID': 'img_([0-9]+).txt',
         # LTRB:2points(left,top,right,bottom) or 4 points(x1,y1,x2,y2,x3,y3,x4,y4)
         'LTRB': False,
         'CRLF': False,  # Lines are delimited by Windows CRLF format

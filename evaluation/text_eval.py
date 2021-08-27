@@ -48,10 +48,13 @@ class TextEvaluator(DatasetEvaluator):
         #     self._coco_api = COCO(json_file)
 
         # use dataset_name to decide eval_gt_path
-        if "icdar" in dataset_name:
+
+        if "icdar15" in dataset_name:
+            self._text_eval_gt_path = "datasets/evaluation/icdar15_gt.zip"
+            self._word_spotting = False
+        elif "icdar" in dataset_name:
             self._text_eval_gt_path = "datasets/evaluation/icdar_gt.zip"
             self._word_spotting = False
-
         self._text_eval_confidence = 0
 
     def reset(self):
@@ -59,45 +62,30 @@ class TextEvaluator(DatasetEvaluator):
 
     def process(self, inputs, outputs):
         for input, output in zip(inputs, outputs):
-            prediction = {"image_id": input["image_id"]}
+            prediction = {"image_name": os.path.basename(input["file_name"])}
 
             instances = output["instances"].to(self._cpu_device)
             prediction["instances"] = instances_to_coco_json(
-                instances, input["image_id"])
+                instances, os.path.basename(input["file_name"]))
             self._predictions.append(prediction)
-        
-    def to_eval_format(self, file_path, temp_dir="temp_det_results", cf_th=0.5):
-        def fis_ascii(s):
-            a = (ord(c) < 128 for c in s)
-            return all(a)
 
-        def de_ascii(s):
-            a = [c for c in s if ord(c) < 128]
-            outa = ''
-            for i in a:
-                outa += i
-            return outa
+    def to_eval_format(self, file_path, temp_dir="temp_det_results", cf_th=0.25):
 
         with open(file_path, 'r') as f:
             data = json.load(f)
             with open('temp_all_det_cors.txt', 'w') as f2:
                 for ix in range(len(data)):
                     if data[ix]['score'] > 0.1:
-                        outstr = '{}: '.format(data[ix]['image_id'])
-                        xmin = 1000000
-                        ymin = 1000000
-                        xmax = 0
-                        ymax = 0
+                        outstr = '{}: '.format(data[ix]['image_name'])
+                       
                         for i in range(len(data[ix]['polys'])):
                             outstr = outstr + \
-                                str(int(data[ix]['polys'][i][0])) + ',' + \
-                                str(int(data[ix]['polys'][i][1])) + ','
-                        ass = ''
-                        if len(ass) >= 0:
-                            outstr = outstr + \
-                                str(round(data[ix]['score'], 3)
-                                    ) + ',####'+ass+'\n'
-                            f2.writelines(outstr)
+                            str(int(data[ix]['polys'][i][0])) + ',' + \
+                            str(int(data[ix]['polys'][i][1])) + ','
+
+                        # outstr = outstr + \
+                        #     str(round(data[ix]['score'], 3)) +'\n'
+                        f2.writelines(outstr)
                 f2.close()
         dirn = temp_dir
         lsc = [cf_th]
@@ -109,15 +97,11 @@ class TextEvaluator(DatasetEvaluator):
             for line in fres:
                 line = line.strip()
                 s = line.split(': ')
-                filename = '{:07d}.txt'.format(int(s[0]))
+                filename = '{}.txt'.format(s[0].split(".")[0])
                 outName = os.path.join(dirn, filename)
                 with open(outName, 'a') as fout:
-                    ptr = s[1].strip().split(',####')
-                    score = ptr[0].split(',')[-1]
-                    if float(score) < isc:
-                        continue
-                    cors = ','.join(e for e in ptr[0].split(',')[:-1])
-                    fout.writelines(cors+',####'+ptr[1]+'\n')
+                    fout.writelines(s[1]+'\n')
+
         os.remove("temp_all_det_cors.txt")
 
     def sort_detection(self, temp_dir):
@@ -135,9 +119,12 @@ class TextEvaluator(DatasetEvaluator):
             fin = open(i, 'r').readlines()
             fout = open(out, 'w')
             for iline, line in enumerate(fin):
-                ptr = line.strip().split(',####')
-                rec = ptr[1]
-                cors = ptr[0].split(',')
+                cors = line.strip().split(',')
+                print(cors)
+                
+                score = cors[-1]
+                cors = cors[0:-1]
+
                 assert(len(cors) % 2 == 0), 'cors invalid.'
                 pts = [(int(cors[j]), int(cors[j+1]))
                        for j in range(0, len(cors), 2)]
@@ -161,8 +148,9 @@ class TextEvaluator(DatasetEvaluator):
                 for ipt in pts[:-1]:
                     outstr += (str(int(ipt[0]))+',' + str(int(ipt[1]))+',')
                 outstr += (str(int(pts[-1][0]))+',' + str(int(pts[-1][1])))
-                outstr = outstr+',####' + rec
+                #outstr = outstr+','+str(score)
                 fout.writelines(outstr+'\n')
+
             fout.close()
         os.chdir(output_file)
 
@@ -231,7 +219,7 @@ class TextEvaluator(DatasetEvaluator):
         return copy.deepcopy(self._results)
 
 
-def instances_to_coco_json(instances, img_id):
+def instances_to_coco_json(instances, image_name):
 
     results = list()
     num_instances = len(instances)
@@ -242,11 +230,16 @@ def instances_to_coco_json(instances, img_id):
     rboxes = instances.rboxes
 
     for rbox, score in zip(rboxes, scores):
-        rbox=rbox.tolist()
+
+        format_rbox = geometry.sort_vertex8(rbox)
+        format_rbox = [[format_rbox[0], format_rbox[1]], [format_rbox[2], format_rbox[3]], [
+            format_rbox[4], format_rbox[5]], [format_rbox[6], format_rbox[7]]]
+        
+        
         result = {
-            "image_id": img_id,
+            "image_name": image_name,
             "category_id": 1,
-            "polys":geometry.order_points_clockwise(rbox),
+            "polys": format_rbox,
             "score": score
         }
         results.append(result)

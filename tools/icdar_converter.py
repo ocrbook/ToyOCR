@@ -1,16 +1,16 @@
+from utils import convert_annotations, drop_orientation, is_not_png, parallel_task, draw_mask
 import argparse
 import glob
 import os.path as osp
 from functools import partial
-from fvcore.common.file_io import PathHandler, PathManager
-import cv2 
-import sys 
+import cv2
+import sys
 import numpy as np
 from shapely.geometry import Polygon
+import os
+
 
 sys.path.insert(0, '.')
-
-from utils import convert_annotations, drop_orientation, is_not_png
 
 
 def collect_files(img_dir, gt_dir):
@@ -35,10 +35,6 @@ def collect_files(img_dir, gt_dir):
     for suffix in suffixes:
         imgs_list.extend(glob.glob(osp.join(img_dir, '*' + suffix)))
 
-    imgs_list = [
-        drop_orientation(f) if is_not_png(f) else f for f in imgs_list
-    ]
-
     files = []
     for img_file in imgs_list:
         gt_file = gt_dir + '/gt_' + osp.splitext(
@@ -50,7 +46,7 @@ def collect_files(img_dir, gt_dir):
     return files
 
 
-def collect_annotations(files, dataset, nproc=1):
+def collect_annotations(files, dataset, out_segm_path, nproc=1):
     """Collect the annotation information.
 
     Args:
@@ -66,16 +62,16 @@ def collect_annotations(files, dataset, nproc=1):
     assert dataset
     assert isinstance(nproc, int)
 
-    load_img_info_with_dataset = partial(load_img_info, dataset=dataset)
-    
-    images = utils.parallel_task(
+    load_img_info_with_dataset = partial(
+        load_img_info, dataset=dataset, out_segm_path=out_segm_path)
+
+    images = parallel_task(
         load_img_info_with_dataset, files, nproc=nproc)
-   
 
     return images
 
 
-def load_img_info(files, dataset):
+def load_img_info(files, dataset, out_segm_path):
     """Load the information of one image.
 
     Args:
@@ -87,15 +83,11 @@ def load_img_info(files, dataset):
     """
     assert isinstance(files, tuple)
     assert isinstance(dataset, str)
-    assert dataset
 
     img_file, gt_file = files
     # read imgs with ignoring orientations
     img = cv2.imread(img_file)
-    # read imgs with orientations as dataloader does when training and testing
-    img_color = cv2.imread(img_file)
-    # make sure imgs have no orientations info, or annotation gt is wrong.
-    assert img.shape[0:2] == img_color.shape[0:2]
+    height, width = img.shape[0:2]
 
     if dataset == 'icdar2017':
         with open(gt_file) as f:
@@ -107,6 +99,7 @@ def load_img_info(files, dataset):
         raise NotImplementedError(f'Not support {dataset}')
 
     anno_info = []
+    polys = []
     for line in gt_list:
         # each line has one ploygen (4 vetices), and others.
         # e.g., 695,885,866,888,867,1146,696,1143,Latin,9
@@ -115,6 +108,8 @@ def load_img_info(files, dataset):
         category_id = 1
         xy = [int(x) for x in strs[0:8]]
         coordinates = np.array(xy).reshape(-1, 2)
+        polys.append(coordinates)
+
         polygon = Polygon(coordinates)
         iscrowd = 0
         # set iscrowd to 1 to ignore 1.
@@ -125,6 +120,7 @@ def load_img_info(files, dataset):
             print('ignore text')
 
         area = polygon.area
+
         # convert to COCO style XYWH format
         min_x, min_y, max_x, max_y = polygon.bounds
         bbox = [min_x, min_y, max_x - min_x, max_y - min_y]
@@ -136,14 +132,18 @@ def load_img_info(files, dataset):
             area=area,
             segmentation=[xy])
         anno_info.append(anno)
-    split_name = osp.basename(osp.dirname(img_file))
+
+    mask = draw_mask(polys=polys, height=height, width=width)
+
+    cv2.imwrite(osp.join(out_segm_path, osp.basename(img_file)), mask)
+
     img_info = dict(
         # remove img_prefix for filename
-        file_name=osp.join(split_name, osp.basename(img_file)),
+        file_name=osp.basename(img_file),
         height=img.shape[0],
         width=img.shape[1],
         anno_info=anno_info,
-        segm_file=osp.join(split_name, osp.basename(gt_file)))
+        segm_file=osp.basename(gt_file))
     return img_info
 
 
@@ -154,10 +154,6 @@ def parse_args():
     parser.add_argument('icdar_path', help='icdar root path')
     parser.add_argument('-o', '--out-dir', help='output path')
     parser.add_argument('-d', '--dataset', help='icdar2017 or icdar2015')
-    parser.add_argument(
-        '--split-list',
-        nargs='+',
-        help='a list of splits. e.g., "--split-list training validation test"')
 
     parser.add_argument(
         '--nproc', default=1, type=int, help='number of process')
@@ -169,23 +165,23 @@ def main():
     args = parse_args()
     icdar_path = args.icdar_path
     out_dir = args.out_dir if args.out_dir else icdar_path
-    PathManager.mkdirs(out_dir)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
 
-    img_dir = osp.join(icdar_path, 'imgs')
-    gt_dir = osp.join(icdar_path, 'annotations')
+    segm_path = os.path.join(out_dir, "segms")
+    if not os.path.exists(segm_path):
+        os.makedirs(segm_path)
 
-    set_name = {}
-    for split in args.split_list:
-        set_name.update({split: 'instances_' + split + '.json'})
-        assert osp.exists(osp.join(img_dir, split))
+    for split in ["train", "test"]:
+        print(f"{split} phase")
+        img_dir = osp.join(icdar_path, split+'_images')
+        gt_dir = osp.join(icdar_path, split+'_gts')
 
-    for split, json_name in set_name.items():
-        print(f'Converting {split} into {json_name}')
-        
-        files = collect_files(
-            osp.join(img_dir, split), osp.join(gt_dir, split))
+        json_name = split+".json"
+
+        files = collect_files(img_dir, gt_dir)
         image_infos = collect_annotations(
-            files, args.dataset, nproc=args.nproc)
+            files, args.dataset, segm_path, nproc=args.nproc)
         convert_annotations(image_infos, osp.join(out_dir, json_name))
 
 
