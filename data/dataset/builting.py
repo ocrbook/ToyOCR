@@ -30,7 +30,17 @@ def register_text_detection(root):
         "icdar_val",
         "datasets/icdar/val_filter_curve.json",
         "datasets/icdar/images/",
-        ['text',])
+        ['text',]),
+        (
+            "icdar15_train",
+            "datasets/icdar15/train.json",
+            "datasets/icdar15/train_images/",
+            ["text",]),
+        (
+            "icdar15_test",
+            "datasets/icdar15/test.json",
+            "datasets/icdar15/test_images/",
+            ["text",])
         ]
     for name, json_file, image_root, class_names in SPLITS:
         register_text_class(name, json_file, image_root, class_names)

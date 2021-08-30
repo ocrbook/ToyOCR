@@ -253,7 +253,7 @@ class Trainer(DefaultTrainer):
         """
         assert self.model.training, "[KDTrainer] base model was changed to eval mode!"
         
-        return 
+
         
         start = time.perf_counter()
         """

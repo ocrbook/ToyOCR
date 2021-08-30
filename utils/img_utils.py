@@ -1,5 +1,9 @@
 import os
 import cv2
+import json
+import numpy as np
+import pyclipper
+import traceback
 
 
 def drop_orientation(img_file):
@@ -17,20 +21,80 @@ def drop_orientation(img_file):
     assert img_file
 
     # read imgs with ignoring orientations
-    img = cv2.imread(img_file, 'unchanged')
-    # read imgs with orientations as dataloader does when training and testing
-    img_color = cv2.imread(img_file, 'color')
-    # make sure imgs have no orientation info, or annotation gt is wrong.
-    if img.shape[:2] == img_color.shape[:2]:
-        return img_file
 
     target_file = os.path.splitext(img_file)[0] + '.png'
     # read img with ignoring orientation information
-    img = cv2.imread(img_file, 'unchanged')
+    img = cv2.imread(img_file)
     cv2.imwrite(img, target_file)
     os.remove(img_file)
     print(f'{img_file} has orientation info. Ignore it by converting to png')
     return target_file
+
+
+def perimeter(poly):
+    try:
+        p = 0
+        nums = poly.shape[0]
+        for i in range(nums):
+            p += abs(np.linalg.norm(poly[i % nums] - poly[(i + 1) % nums]))
+        # logger.debug('perimeter:{}'.format(p))
+        return p
+    except Exception as e:
+        traceback.print_exc()
+        raise e
+
+
+def shrink_poly(poly, r=0.92):
+    '''
+    fit a poly inside the origin poly, maybe bugs here...
+    used for generate the score map
+    :param poly: the text poly
+    :param r: r in the paper
+    :return: the shrinked poly
+    '''
+    try:
+        area_poly = abs(pyclipper.Area(poly))
+        perimeter_poly = perimeter(poly)
+        poly_s = []
+        pco = pyclipper.PyclipperOffset()
+        if perimeter_poly:
+            d = area_poly * (1 - r * r) / perimeter_poly
+            pco.AddPath(poly, pyclipper.JT_ROUND, pyclipper.ET_CLOSEDPOLYGON)
+            poly_s = pco.Execute(-d)
+        shrinked_poly = poly_s[0]
+        if len(shrinked_poly) < 4:
+            return poly
+        return shrinked_poly
+
+    except Exception as e:
+        return poly
+
+
+def draw_mask(polys, height, width):
+    """Draw tower of the mask
+
+    Args:
+        poly: numpy.array
+        height: int
+        width: int 
+
+    Returns:
+        The mask.
+    """
+
+    mask = np.zeros((height, width), np.float32)
+    grad_list = [1.0, 0.9, 0.8, 0.7]
+    score_list = [0.5, 0.7, 0.9, 1.0]
+    for poly in polys:
+        for grad, score in zip(grad_list, score_list):
+            if grad < 1:
+                shrinked_poly = shrink_poly(poly, grad)
+                cv2.fillPoly(
+                    mask, [np.array(shrinked_poly, np.int32)], 255. * score)
+            else:
+                cv2.fillPoly(mask, [np.array(poly, np.int32)], 255. * score)
+
+    return mask
 
 
 def is_not_png(img_file):
@@ -49,9 +113,6 @@ def is_not_png(img_file):
 
     return suffix not in ['.PNG', '.png']
 
-
-
-import json 
 
 def convert_annotations(image_infos, out_json_name):
     """Convert the annotation into coco style.
@@ -88,8 +149,8 @@ def convert_annotations(image_infos, out_json_name):
 
     if len(out_json['annotations']) == 0:
         out_json.pop('annotations')
-    
-    with open(out_json_name,"w") as fp:
-        json.dump(out_json,fp)
+
+    with open(out_json_name, "w") as fp:
+        json.dump(out_json, fp)
 
     return out_json

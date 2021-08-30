@@ -77,12 +77,12 @@ class TextEvaluator(DatasetEvaluator):
                 for ix in range(len(data)):
                     if data[ix]['score'] > 0.1:
                         outstr = '{}: '.format(data[ix]['image_name'])
-                       
+
                         for i in range(len(data[ix]['polys'])):
                             outstr = outstr + \
-                            str(int(data[ix]['polys'][i][0])) + ',' + \
-                            str(int(data[ix]['polys'][i][1])) + ','
-
+                                str(int(data[ix]['polys'][i][0])) + ',' + \
+                                str(int(data[ix]['polys'][i][1])) + ','
+                        outstr = outstr[0:-1]+"\n"
                         # outstr = outstr + \
                         #     str(round(data[ix]['score'], 3)) +'\n'
                         f2.writelines(outstr)
@@ -97,6 +97,7 @@ class TextEvaluator(DatasetEvaluator):
             for line in fres:
                 line = line.strip()
                 s = line.split(': ')
+
                 filename = '{}.txt'.format(s[0].split(".")[0])
                 outName = os.path.join(dirn, filename)
                 with open(outName, 'a') as fout:
@@ -118,12 +119,9 @@ class TextEvaluator(DatasetEvaluator):
             out = i.replace(origin_file, output_file)
             fin = open(i, 'r').readlines()
             fout = open(out, 'w')
+
             for iline, line in enumerate(fin):
                 cors = line.strip().split(',')
-                print(cors)
-                
-                score = cors[-1]
-                cors = cors[0:-1]
 
                 assert(len(cors) % 2 == 0), 'cors invalid.'
                 pts = [(int(cors[j]), int(cors[j+1]))
@@ -208,13 +206,7 @@ class TextEvaluator(DatasetEvaluator):
             result_path, self._text_eval_gt_path)
         os.remove(result_path)
 
-        # parse
-        template = "(\S+): (\S+): (\S+), (\S+): (\S+), (\S+): (\S+)"
-        for task in ("e2e_method", "det_only_method"):
-            result = text_result[task]
-            groups = re.match(template, result).groups()
-            self._results[groups[0]] = {
-                groups[i*2+1]: float(groups[(i+1)*2]) for i in range(3)}
+        print(text_result["Message"])
 
         return copy.deepcopy(self._results)
 
@@ -234,8 +226,7 @@ def instances_to_coco_json(instances, image_name):
         format_rbox = geometry.sort_vertex8(rbox)
         format_rbox = [[format_rbox[0], format_rbox[1]], [format_rbox[2], format_rbox[3]], [
             format_rbox[4], format_rbox[5]], [format_rbox[6], format_rbox[7]]]
-        
-        
+
         result = {
             "image_name": image_name,
             "category_id": 1,

@@ -222,6 +222,7 @@ class DatasetMapper:
                 instances, box_threshold=self.BOX_MINSIZE)
 
         # USER: Remove if you don't do semantic  segmentation.
+
         if "segm_file" in dataset_dict:
             with PathManager.open(dataset_dict.pop("segm_file"), "rb") as f:
                 segm_gt = Image.open(f)

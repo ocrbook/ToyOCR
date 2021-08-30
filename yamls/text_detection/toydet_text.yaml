@@ -1,6 +1,6 @@
 MODEL:
   #WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
-  WEIGHTS: 'exp_results/toydet_exp_R50/model_final.pth' #'exp_results/layout_exp_R50_SGD/model_final.pth'
+  WEIGHTS: 'exp_results/final/model_final.pth' #'exp_results/layout_exp_R50_SGD/model_final.pth'
 
   META_ARCHITECTURE: "ToyDet"
   BN_TYPE: "BN"
@@ -27,15 +27,15 @@ DATALOADER:
   NUM_WORKERS: 1
 
 DATASETS:
-  TRAIN: ("icdar_train",)
-  TEST: ("icdar_val",)
+  TRAIN: ("icdar15_train",)
+  TEST: ("icdar15_test",)
 
 SOLVER:
-  IMS_PER_BATCH: 10 
+  IMS_PER_BATCH: 6
   WARMUP_ITERS: 1
   STEPS: (20, 30)
   MAX_ITER: 40
-  BASE_LR: 0.0002 #5e-4
+  BASE_LR: 0.002 #5e-4
   LR_SCHEDULER_NAME: "WarmupCosineAnnealingLR"
   COSINE_DECAY_ITER: 0.6
   SWA:
@@ -55,12 +55,12 @@ SOLVER:
 INPUT:
   FORMAT: 'RGB'
   MIN_SIZE_TEST: 0
-  MIN_SIZE_TRAIN: (384, 448, 512,640,)
-  MAX_SIZE_TRAIN: 512
+  MIN_SIZE_TRAIN: (900,1024)
+  MAX_SIZE_TRAIN: 1024
   CROP:
     ENABLED: True
     TYPE: "relative_range"
     SIZE: [0.6, 0.6]
 
-OUTPUT_DIR: "exp_results/toydet_exp_R50"
+OUTPUT_DIR: "exp_results/final"
 VERSION: 2

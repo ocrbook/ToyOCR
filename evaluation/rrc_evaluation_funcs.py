@@ -217,8 +217,9 @@ def get_tl_line_values(line, LTRB=True, withTranscription=False, withConfidence=
                     "Format incorrect. Should be: x1,y1,x2,y2,x3,y3,x4,y4")
 
         points = [float(m.group(i)) for i in range(1, (numPoints+1))]
+        
 
-        validate_clockwise_points(points)
+        #validate_clockwise_points(points)
 
         if (imWidth > 0 and imHeight > 0):
             validate_point_inside_bounds(
@@ -323,7 +324,8 @@ def main_evaluation(p, det_file, gt_file, default_evaluation_params_fn, validate
                            else json.loads(p['p'][1:-1]))
 
     res_dict = {'calculated': True, 'Message': '',
-                'method': '{}', 'per_sample': '{}'}
+                'method': '{}', 'per_sample': '{}'
+                }
     # try:
     validate_data_fn(p['g'], p['s'], eval_params)
     eval_data = evaluate_method_fn(p['g'], p['s'], eval_params)
@@ -368,9 +370,8 @@ def main_evaluation(p, det_file, gt_file, default_evaluation_params_fn, validate
     if show_result:
         sys.stdout.write("Calculated!")
         sys.stdout.write('\n')
-        sys.stdout.write(json.dumps(res_dict['e2e_method']))
         sys.stdout.write('\n')
-        sys.stdout.write(json.dumps(res_dict['det_only_method']))
+        sys.stdout.write(json.dumps(res_dict['method']))
         sys.stdout.write('\n')
 
     return res_dict
