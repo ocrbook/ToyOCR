@@ -219,10 +219,9 @@ def get_tl_line_values(line, LTRB=True, withTranscription=False, withConfidence=
 
         points = [float(m.group(i)) for i in range(1, (numPoints+1))]
         
-        try: 
-            validate_clockwise_points(points)
-        except Exception as e:
-            points=[points[6],points[7],points[0],points[1],points[2],points[3],points[4],points[5]]
+
+        #validate_clockwise_points(points)
+
         if (imWidth > 0 and imHeight > 0):
             validate_point_inside_bounds(
                 points[0], points[1], imWidth, imHeight)

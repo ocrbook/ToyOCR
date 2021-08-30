@@ -233,6 +233,7 @@ def instances_to_coco_json(instances, image_name):
         format_rbox = [[format_rbox[0], format_rbox[1]], [format_rbox[2], format_rbox[3]], [
 
             format_rbox[4], format_rbox[5]], [format_rbox[6], format_rbox[7]]]
+
         result = {
             "image_name": image_name,
             "category_id": 1,

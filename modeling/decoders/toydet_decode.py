@@ -14,7 +14,11 @@ class ToyDetDecoder(object):
     max_candidates = 100
     dest = 'binary'
 
+<<<<<<< HEAD
     def __init__(self, thresh=0.3, box_thresh=0.49, **kwargs):
+=======
+    def __init__(self, thresh=0.3, box_thresh=0.55, **kwargs):
+>>>>>>> 2b06fb0aea018e2d1515281a4593eb2f71867ffa
         self.min_size = 1
         self.scale_ratio = 0.4
 

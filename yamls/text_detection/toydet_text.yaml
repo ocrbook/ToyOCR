@@ -31,11 +31,19 @@ DATASETS:
   TEST: ("icdar15_test",)
 
 SOLVER:
+<<<<<<< HEAD
   IMS_PER_BATCH: 72 
   WARMUP_ITERS: 3
   STEPS: (40, 80)
   MAX_ITER: 160
   BASE_LR: 0.02 #5e-4
+=======
+  IMS_PER_BATCH: 6
+  WARMUP_ITERS: 1
+  STEPS: (20, 30)
+  MAX_ITER: 40
+  BASE_LR: 0.002 #5e-4
+>>>>>>> 2b06fb0aea018e2d1515281a4593eb2f71867ffa
   LR_SCHEDULER_NAME: "WarmupCosineAnnealingLR"
   COSINE_DECAY_ITER: 0.6
   SWA:
@@ -55,9 +63,14 @@ SOLVER:
 INPUT:
   FORMAT: 'RGB'
   MIN_SIZE_TEST: 0
+<<<<<<< HEAD
   MAX_SIZE_TEST: 1280
   MIN_SIZE_TRAIN: (600,800)
   MAX_SIZE_TRAIN: 1280
+=======
+  MIN_SIZE_TRAIN: (900,1024)
+  MAX_SIZE_TRAIN: 1024
+>>>>>>> 2b06fb0aea018e2d1515281a4593eb2f71867ffa
   CROP:
     ENABLED: True
     TYPE: "relative_range"
