@@ -87,6 +87,7 @@ class ToyDet(nn.Module):
                 
                 img=img[:,:,::-1]
                 img=img.astype(np.int8)
+                
                  # img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
                 instances=result["instances"]
                 rboxes=instances.rboxes
@@ -122,7 +123,6 @@ class ToyDet(nn.Module):
 
     @torch.no_grad()
     def inference(self, images, batched_inputs, K=100):
-
         features = self.backbone(images.tensor)
         up_fmap = self.upsample(features)
         preds = self.head(up_fmap)

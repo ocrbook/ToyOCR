@@ -209,7 +209,7 @@ class TextEvaluator(DatasetEvaluator):
         print(text_result["Message"])
 
         return copy.deepcopy(self._results)
-
+from .rrc_evaluation_funcs import validate_clockwise_points
 
 def instances_to_coco_json(instances, image_name):
 
@@ -224,7 +224,14 @@ def instances_to_coco_json(instances, image_name):
     for rbox, score in zip(rboxes, scores):
 
         format_rbox = geometry.sort_vertex8(rbox)
+        try:
+            validate_clockwise_points(format_rbox)
+        except Exception as e:
+            print(e,format_rbox)
+            continue
+
         format_rbox = [[format_rbox[0], format_rbox[1]], [format_rbox[2], format_rbox[3]], [
+
             format_rbox[4], format_rbox[5]], [format_rbox[6], format_rbox[7]]]
 
         result = {

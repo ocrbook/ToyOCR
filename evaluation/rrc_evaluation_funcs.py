@@ -108,6 +108,7 @@ def validate_lines_in_file(fileName, file_contents, CRLF=True, LTRB=True, withTr
                 validate_tl_line(line, LTRB, withTranscription,
                                  withConfidence, imWidth, imHeight)
             except Exception as e:
+                print(fileName)
                 raise Exception(("Line in sample not valid. Sample: %s Line: %s Error: %s" % (
                     fileName, line, str(e))).encode('utf-8', 'replace'))
 
