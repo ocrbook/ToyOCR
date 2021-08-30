@@ -14,6 +14,7 @@ from ..losses import reg_l1_loss, modified_focal_loss, ignore_unlabel_focal_loss
 from ..heads import ToyDetHead
 from ..necks import FPNDeconv
 from ..decoders import toydet_decode
+from ..losses import BalanceL1Loss
 
 from ..utils import batch_padding
 from torch.nn import functional as F
@@ -52,6 +53,8 @@ class ToyDet(nn.Module):
             self.device).view(3, 1, 1)
         self.normalizer = lambda x: (x - pixel_mean) / pixel_std
         self.decoder = toydet_decode.ToyDetDecoder()
+        
+        
 
         self.to(self.device)
 
@@ -98,15 +101,22 @@ class ToyDet(nn.Module):
         image_shape = images.tensor.shape[-2:]
 
         gt_segm = [x["sem_seg"].to(self.device) for x in batched_inputs]
+        
+        
         gt_segm = ImageList.from_tensors(
-            gt_segm, 32).tensor
+            gt_segm, 32,-1).tensor
 
+        gt_mask = [x["mask"].to(self.device) for x in batched_inputs]
+        
+        gt_mask =ImageList.from_tensors(
+            gt_mask, 32,0).tensor
+        
         features = self.backbone(images.tensor)
 
         up_fmap = self.upsample(features)
         preds = self.head(up_fmap)
 
-        loss_segm = self.head.losses(preds, gt_segm)
+        loss_segm = self.head.losses(preds, gt_segm,gt_mask)
 
         return loss_segm
 

@@ -6,6 +6,8 @@ import torch
 from detectron2.data import detection_utils as utils
 from fvcore.common.file_io import PathManager
 from PIL import Image
+import cv2
+
 from .transforms.arguement import arguementation
 
 from . import transforms as T
@@ -122,7 +124,7 @@ class DatasetMapper:
         self.is_train = is_train
         self.BOX_MINSIZE = 1e-5
         self.imgaug_prob = 1.0
-        
+
         if cfg.MODEL.META_ARCHITECTURE == "CenterNet":
             self.imgaug_prob = cfg.MODEL.DETNET.IMGAUG_PROB
             self.BOX_MINSIZE = cfg.MODEL.DETNET.BOX_MINSIZE
@@ -140,6 +142,7 @@ class DatasetMapper:
         # USER: Write your own image loading if it's not from a file
         image = utils.read_image(
             dataset_dict["file_name"], format=self.img_format)
+        # cv2.imshow("hello",image)
         utils.check_image_size(dataset_dict, image)
         # draw image
         # for anno in dataset_dict['annotations']:
@@ -204,14 +207,17 @@ class DatasetMapper:
                 if not self.keypoint_on:
                     anno.pop("keypoints", None)
 
+            ignore_polys = [obj["poly"] for obj in dataset_dict[
+                "annotations"] if obj["ignore"] == 1]
             # USER: Implement additional transformations if you have other types of data
             annos = [
                 utils.transform_instance_annotations(
                     obj, transforms, image_shape, keypoint_hflip_indices=self.keypoint_hflip_indices
                 )
                 for obj in dataset_dict.pop("annotations")
-                if obj.get("iscrowd", 0) == 0
+                if obj.get("ignore", 0) == 0
             ]
+
             instances = utils.annotations_to_instances(
                 annos, image_shape, mask_format=self.mask_format
             )
@@ -220,6 +226,8 @@ class DatasetMapper:
                 instances.gt_boxes = instances.gt_masks.get_bounding_boxes()
             dataset_dict["instances"] = utils.filter_empty_instances(
                 instances, box_threshold=self.BOX_MINSIZE)
+            if ignore_polys:
+                dataset_dict["ignore_polys"] = ignore_polys
 
         # USER: Remove if you don't do semantic  segmentation.
 
@@ -228,10 +236,28 @@ class DatasetMapper:
                 segm_gt = Image.open(f)
 
                 segm_gt = np.asarray(segm_gt, dtype="uint8")
+
                 segm_shape = segm_gt.shape[0:2]
 
             segm_gt = transforms.apply_segmentation(segm_gt)
+
             segm_gt = torch.as_tensor(segm_gt.astype("float32")/255.)
+
             dataset_dict["sem_seg"] = segm_gt
+
+        mask = np.ones(origin_shape)
+
+        if "ignore_polys" in dataset_dict:
+
+            for poly in dataset_dict["ignore_polys"]:
+                poly = np.array(poly, np.int32)
+                poly = poly.reshape(-1, 2)
+                cv2.fillPoly(mask, [poly], 0)
+
+            # cv2.imshow("hi",np.array(mask,np.uint8)*255)
+            # cv2.waitKey(0)
+        mask = transforms.apply_segmentation(mask)
+        mask = torch.as_tensor(mask)
+        dataset_dict["mask"] = mask
 
         return dataset_dict

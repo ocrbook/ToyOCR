@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from ..losses import BalanceL1Loss
 
 
 class SingleHead(nn.Module):
@@ -37,9 +38,10 @@ class ToyDetHead(nn.Module):
             bias_value=cfg.MODEL.DETNET.BIAS_VALUE,
         )
         self.ignore_value = -1
-        self.loss_weight=1.0
-        self.common_stride=cfg.MODEL.DETNET.COMMON_STRIDE
+        self.loss_weight = 1.0
+        self.common_stride = cfg.MODEL.DETNET.COMMON_STRIDE
         self.seg_head = SingleHead(64, 1)
+        self.loss_func = BalanceL1Loss()
 
     def forward(self, x):
         segm = self.cls_head(x)
@@ -47,16 +49,16 @@ class ToyDetHead(nn.Module):
 
         return segm
 
-    def losses(self, predictions, targets):
-        targets=targets.unsqueeze(1)
+    def losses(self, predictions, targets, masks):
+        targets = targets.unsqueeze(1)
         #print("tag here:",targets.shape)
-        
+
         predictions = predictions.float()
         predictions = F.interpolate(
             predictions, scale_factor=self.common_stride, mode="bilinear", align_corners=False
         )
-        cur_device=predictions.device
-        targets=targets.to(cur_device)
-        loss = torch.nn.MSELoss()(predictions, targets)
+        cur_device = predictions.device
+        targets = targets.to(cur_device)
+        loss, loss_dict = self.loss_func(predictions, targets, masks)
         losses = {"loss_segm": loss * self.loss_weight}
         return losses
