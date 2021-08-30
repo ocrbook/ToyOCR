@@ -108,6 +108,7 @@ def validate_lines_in_file(fileName, file_contents, CRLF=True, LTRB=True, withTr
                 validate_tl_line(line, LTRB, withTranscription,
                                  withConfidence, imWidth, imHeight)
             except Exception as e:
+                print(fileName)
                 raise Exception(("Line in sample not valid. Sample: %s Line: %s Error: %s" % (
                     fileName, line, str(e))).encode('utf-8', 'replace'))
 
@@ -217,9 +218,11 @@ def get_tl_line_values(line, LTRB=True, withTranscription=False, withConfidence=
                     "Format incorrect. Should be: x1,y1,x2,y2,x3,y3,x4,y4")
 
         points = [float(m.group(i)) for i in range(1, (numPoints+1))]
-
-        validate_clockwise_points(points)
-
+        
+        try: 
+            validate_clockwise_points(points)
+        except Exception as e:
+            points=[points[6],points[7],points[0],points[1],points[2],points[3],points[4],points[5]]
         if (imWidth > 0 and imHeight > 0):
             validate_point_inside_bounds(
                 points[0], points[1], imWidth, imHeight)
@@ -323,7 +326,8 @@ def main_evaluation(p, det_file, gt_file, default_evaluation_params_fn, validate
                            else json.loads(p['p'][1:-1]))
 
     res_dict = {'calculated': True, 'Message': '',
-                'method': '{}', 'per_sample': '{}'}
+                'method': '{}', 'per_sample': '{}'
+                }
     # try:
     validate_data_fn(p['g'], p['s'], eval_params)
     eval_data = evaluate_method_fn(p['g'], p['s'], eval_params)
@@ -368,9 +372,8 @@ def main_evaluation(p, det_file, gt_file, default_evaluation_params_fn, validate
     if show_result:
         sys.stdout.write("Calculated!")
         sys.stdout.write('\n')
-        sys.stdout.write(json.dumps(res_dict['e2e_method']))
         sys.stdout.write('\n')
-        sys.stdout.write(json.dumps(res_dict['det_only_method']))
+        sys.stdout.write(json.dumps(res_dict['method']))
         sys.stdout.write('\n')
 
     return res_dict

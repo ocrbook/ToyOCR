@@ -32,6 +32,7 @@ def default_evaluation_params():
         'CONFIDENCES': False,  # Detections must include confidence value. AP will be calculated
         # Generate per sample results and produce data for visualization
         'PER_SAMPLE_RESULTS': True
+       
     }
 
 
@@ -69,7 +70,7 @@ def evaluate_method(gtFilePath, submFilePath, evaluationParams):
         - samples (optional) Per sample metrics. Ex: {'sample1' : { 'Precision':0.8,'Recall':0.9 } , 'sample2' : { 'Precision':0.8,'Recall':0.9 }
     """
 
-    for module, alias in evaluation_imports().iteritems():
+    for module, alias in evaluation_imports().items():
         globals()[alias] = importlib.import_module(module)
 
     def polygon_from_points(points):

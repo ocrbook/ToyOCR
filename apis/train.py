@@ -252,8 +252,7 @@ class Trainer(DefaultTrainer):
         Implement the moco training logic described above.
         """
         assert self.model.training, "[KDTrainer] base model was changed to eval mode!"
-        
-        return 
+
         
         start = time.perf_counter()
         """

@@ -39,6 +39,7 @@ def build_transform_gen(cfg, is_train):
         resize_type = cfg.INPUT.RESIZE_TYPE
 
         if resize_type == "ResizeShortestEdge":
+            print(min_size,max_size)
             tfm_gens = [T.ResizeShortestEdge(min_size, max_size, sample_style)]
         elif resize_type == "Resize":
             try:
@@ -222,6 +223,7 @@ class DatasetMapper:
                 instances, box_threshold=self.BOX_MINSIZE)
 
         # USER: Remove if you don't do semantic  segmentation.
+
         if "segm_file" in dataset_dict:
             with PathManager.open(dataset_dict.pop("segm_file"), "rb") as f:
                 segm_gt = Image.open(f)

@@ -3,7 +3,7 @@ import cv2
 import json
 
 
-gt_path="../datasets/icdar/val.json"
+gt_path="../datasets/icdar15/test.json"
 pred_path="../exp_results/final/inference/text_results.json"
 
 with open(gt_path) as fp:
@@ -25,6 +25,7 @@ pred_image_anno_maps=dict()
 
 for anno in gt_annos:
     img_id=anno["image_id"]
+    img_id=gt_image_maps[img_id]
     if img_id in gt_image_anno_maps:
         gt_image_anno_maps[img_id].append(anno)
     else:
@@ -32,7 +33,7 @@ for anno in gt_annos:
         gt_image_anno_maps[img_id] = anno_list
 
 for anno in pred_data:
-    img_id=anno["image_id"]
+    img_id=anno["image_name"]
     if img_id in pred_image_anno_maps:
         pred_image_anno_maps[img_id].append(anno)
     else:
@@ -42,16 +43,16 @@ for anno in pred_data:
 import cv2
 import os 
 import numpy as np
-image_root = "../datasets/icdar/images/"
+image_root = "../datasets/icdar15/test_images/"
 first =True
 
 cnt = 1 
 for img_id,file_name in gt_image_maps.items():
-    gt_annos=gt_image_anno_maps[img_id]
-    if img_id not in pred_image_anno_maps:
+    gt_annos=gt_image_anno_maps[file_name]
+    if file_name not in pred_image_anno_maps:
         print("bad img_id:",img_id)
         continue
-    pred_annos=pred_image_anno_maps[img_id]
+    pred_annos=pred_image_anno_maps[file_name]
     
     image_path=os.path.join(image_root,file_name)
     if first:
@@ -65,8 +66,9 @@ for img_id,file_name in gt_image_maps.items():
         
     for gt_anno in gt_annos:
         print(gt_anno)
-        gt_polys=gt_anno["text"]["points"]
+        gt_polys=gt_anno["segmentation"]
         gt_polys=np.array(gt_polys,np.int)
+        gt_polys = gt_polys.reshape(-1,2)
         img= cv2.polylines(img, [gt_polys], True, color=(0, 0, 255), thickness=2)
         
     cnt +=1
