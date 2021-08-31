@@ -70,40 +70,39 @@ class TextEvaluator(DatasetEvaluator):
             self._predictions.append(prediction)
 
     def to_eval_format(self, file_path, temp_dir="temp_det_results", cf_th=0.25):
-
-        with open(file_path, 'r') as f:
-            data = json.load(f)
-            with open('temp_all_det_cors.txt', 'w') as f2:
-                for ix in range(len(data)):
-                    if data[ix]['score'] > 0.1:
-                        outstr = '{}: '.format(data[ix]['image_name'])
-
-                        for i in range(len(data[ix]['polys'])):
-                            outstr = outstr + \
-                                str(int(data[ix]['polys'][i][0])) + ',' + \
-                                str(int(data[ix]['polys'][i][1])) + ','
-                        outstr = outstr[0:-1]+"\n"
-                        # outstr = outstr + \
-                        #     str(round(data[ix]['score'], 3)) +'\n'
-                        f2.writelines(outstr)
-                f2.close()
-        dirn = temp_dir
-        lsc = [cf_th]
-        fres = open('temp_all_det_cors.txt', 'r').readlines()
-        for isc in lsc:
-            if not os.path.isdir(dirn):
-                os.mkdir(dirn)
-
-            for line in fres:
-                line = line.strip()
-                s = line.split(': ')
-
-                filename = '{}.txt'.format(s[0].split(".")[0])
-                outName = os.path.join(dirn, filename)
-                with open(outName, 'a') as fout:
-                    fout.writelines(s[1]+'\n')
-
-        os.remove("temp_all_det_cors.txt")
+        '''
+        result = {
+            "image_name": image_name,
+            "category_id": 1,
+            "polys": format_rbox,
+            "score": score
+        }
+        '''
+        with open(file_path,'r') as fp:
+            datas=json.load(fp)
+        
+        image_annos_map=dict()
+        
+        for d in datas:
+            image_name=d["image_name"]
+            polys=d["polys"]
+            if image_name in image_annos_map:
+                image_annos_map[image_name].append(polys)
+            else:
+                image_annos_map[image_name]=[polys]
+            
+            
+        for image_name,polys_lst in image_annos_map.items():
+         
+            
+            filename = 'res_' + image_name.replace('.jpg', '.txt')
+            with open(os.path.join(temp_dir, filename), 'wt') as f:
+                    if len(polys) == 0:
+                        f.write('')
+                    for box in polys_lst:
+                        f.write(','.join(map(str, box)) + '\n')
+        
+        
 
     def sort_detection(self, temp_dir):
         origin_file = temp_dir
