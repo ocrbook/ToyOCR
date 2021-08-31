@@ -41,7 +41,7 @@ class ToyDetHead(nn.Module):
         self.loss_weight = 1.0
         self.common_stride = cfg.MODEL.DETNET.COMMON_STRIDE
         self.seg_head = SingleHead(64, 1)
-        self.loss_func = BalanceL1Loss()
+        self.loss_func = nn.MSELoss(size_average=False ,reduce=False) 
 
     def forward(self, x):
         segm = self.cls_head(x)
@@ -55,10 +55,13 @@ class ToyDetHead(nn.Module):
 
         predictions = predictions.float()
         predictions = F.interpolate(
-            predictions, scale_factor=self.common_stride, mode="bilinear", align_corners=False
+            predictions, scale_factor=self.common_stride, mode="bilinear", align_corners=True
         )
         cur_device = predictions.device
         targets = targets.to(cur_device)
-        loss, loss_dict = self.loss_func(predictions, targets, masks)
-        losses = {"loss_segm": loss * self.loss_weight}
-        return losses
+        loss = self.loss_func(predictions, targets)
+        loss = torch.mul(loss,masks.float())
+        loss =loss.sum()/masks.sum()
+         
+        
+        return dict(mse_loss=loss)

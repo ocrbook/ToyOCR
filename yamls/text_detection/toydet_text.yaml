@@ -1,6 +1,6 @@
 MODEL:
   #WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
-  WEIGHTS: 'exp_results/final/model_final.pth' #'exp_results/layout_exp_R50_SGD/model_final.pth'
+  #WEIGHTS: 'exp_results/final/model_final.pth' #'exp_results/layout_exp_R50_SGD/model_final.pth'
 
   META_ARCHITECTURE: "ToyDet"
   BN_TYPE: "BN"
@@ -22,7 +22,7 @@ MODEL:
     TENSOR_DIM: 128
 
 TEST:
-  EVAL_PERIOD: 2 
+  EVAL_PERIOD:  10 
 DATALOADER:
   NUM_WORKERS: 12
 
@@ -32,10 +32,10 @@ DATASETS:
 
 SOLVER:
   IMS_PER_BATCH: 72 
-  WARMUP_ITERS: 3
+  WARMUP_ITERS: 10 
   STEPS: (40, 80)
   MAX_ITER: 160
-  BASE_LR: 0.02 #5e-4
+  BASE_LR: 0.001 #5e-4
   LR_SCHEDULER_NAME: "WarmupCosineAnnealingLR"
   COSINE_DECAY_ITER: 0.6
   SWA:
