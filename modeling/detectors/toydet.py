@@ -14,14 +14,14 @@ from ..losses import reg_l1_loss, modified_focal_loss, ignore_unlabel_focal_loss
 from ..heads import ToyDetHead
 from ..necks import FPNDeconv
 from ..decoders import toydet_decode
-from ..losses import BalanceL1Loss
+from ..losses import BalanceL1Loss, mse_loss
 
 from ..utils import batch_padding
 from torch.nn import functional as F
 
 __all__ = ["ToyDet"]
 
-DEBUG= False
+DEBUG = False
 
 
 @META_ARCH_REGISTRY.register()
@@ -53,8 +53,6 @@ class ToyDet(nn.Module):
             self.device).view(3, 1, 1)
         self.normalizer = lambda x: (x - pixel_mean) / pixel_std
         self.decoder = toydet_decode.ToyDetDecoder()
-        
-        
 
         self.to(self.device)
 
@@ -72,52 +70,70 @@ class ToyDet(nn.Module):
         Returns:
             dict[str: Tensor]:
         """
-        copy_imgs=batched_inputs.copy()
-        
+        copy_imgs = batched_inputs.copy()
+
         images = self.preprocess_image(batched_inputs)
 
         if not self.training:
             # return self.inference(images)
-            rets= self.inference(images, batched_inputs)
-            
-            for batch,result in zip(copy_imgs,rets):
-                img=batch["image"]
-               
-                img=img.cpu().detach().numpy().transpose((1,2,0))
-                
-                img=img[:,:,::-1]
-                img=img.astype(np.int8)
-                
-                 # img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
-                instances=result["instances"]
-                rboxes=instances.rboxes
-                
+            rets = self.inference(images, batched_inputs)
+
+            for batch, result in zip(copy_imgs, rets):
+                img = batch["image"]
+
+                img = img.cpu().detach().numpy().transpose((1, 2, 0))
+
+                img = img[:, :, ::-1]
+                img = img.astype(np.int8)
+
+                # img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+                instances = result["instances"]
+                rboxes = instances.rboxes
+
                 for rbox in rboxes:
-                    rbox=np.array(rbox,np.int)
-                    img=cv2.polylines(img, [rbox], True, color=(0, 0, 155), thickness=2)
+                    rbox = np.array(rbox, np.int)
+                    img = cv2.polylines(
+                        img, [rbox], True, color=(0, 0, 155), thickness=2)
                 # cv2.imshow("hi",img)
                 # cv2.waitKey(0)
-            return rets 
+            return rets
 
         image_shape = images.tensor.shape[-2:]
 
         gt_segm = [x["sem_seg"].to(self.device) for x in batched_inputs]
-        
-        
-        gt_segm = ImageList.from_tensors(
-            gt_segm, 32,-1).tensor
 
-        gt_mask = [x["mask"].to(self.device) for x in batched_inputs]
-        
-        gt_mask =ImageList.from_tensors(
-            gt_mask, 32,0).tensor
-        
+        gt_segm = ImageList.from_tensors(
+            gt_segm, 32, 0).tensor
+
+        segm_show = (gt_segm[0].detach().cpu().numpy()*255).astype(np.uint8)
+        x, y = segm_show.shape[0:2]
+        segm_show = cv2.resize(segm_show, (int(y/4), int(x/4)))
+        cv2.imshow("gt_segm", segm_show)
+
+        mask = [x["mask"].to(self.device) for x in batched_inputs]
+
+        mask = ImageList.from_tensors(
+            mask, 32, 0).tensor
+
+        img_mask = (mask[0].detach().cpu().numpy()*255).astype(np.uint8)
+
+        x, y = img_mask.shape[0:2]
+        img_mask = cv2.resize(img_mask, (int(y/4), int(x/4)))
+        cv2.imshow("mask", img_mask)
+
         features = self.backbone(images.tensor)
 
         up_fmap = self.upsample(features)
         preds = self.head(up_fmap)
 
-        loss_segm = self.head.losses(preds, gt_segm,gt_mask)
+        img_show = preds[0].detach().cpu().numpy()[0]
+
+        cv2.imshow("det", (img_show*255).astype(np.uint8))
+        cv2.waitKey(2)
+
+        # loss=mse_loss(preds,gt_segm)
+
+        loss_segm = self.head.losses(preds, gt_segm, mask)
 
         return loss_segm
 
@@ -141,7 +157,7 @@ class ToyDet(nn.Module):
             result.scores = scores
 
             results.append({"instances": result})
-       
+
         return results
 
     def preprocess_image(self, batched_inputs):

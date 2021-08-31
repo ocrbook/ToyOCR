@@ -10,6 +10,7 @@ import cv2
 
 from .transforms.arguement import arguementation
 
+
 from . import transforms as T
 
 """
@@ -41,7 +42,7 @@ def build_transform_gen(cfg, is_train):
         resize_type = cfg.INPUT.RESIZE_TYPE
 
         if resize_type == "ResizeShortestEdge":
-            print(min_size,max_size)
+            print(min_size, max_size)
             tfm_gens = [T.ResizeShortestEdge(min_size, max_size, sample_style)]
         elif resize_type == "Resize":
             try:
@@ -49,6 +50,7 @@ def build_transform_gen(cfg, is_train):
             except:
                 min_size = int(min_size)
             tfm_gens = [T.Resize(shape=(min_size, max_size))]
+
     else:
         tfm_gens = []
 
@@ -89,11 +91,14 @@ class DatasetMapper:
 
     def __init__(self, cfg, is_train=True):
 
-        if cfg.INPUT.CROP.ENABLED and is_train:
+        if cfg.INPUT.CROP.ENABLED and is_train and cfg.INPUT.CROP.TYPE != "crop_keep":
             self.crop_gen = T.RandomCrop(
                 cfg.INPUT.CROP.TYPE, cfg.INPUT.CROP.SIZE)
             logging.getLogger('detectron2').info(
                 "CropGen used in training: " + str(self.crop_gen))
+        elif cfg.INPUT.CROP.ENABLED and is_train and cfg.INPUT.CROP.TYPE == "crop_keep":
+            self.keep_size_and_crop = True
+            self.data_croper = T.RandomCroper()
         else:
             self.crop_gen = None
 
@@ -145,6 +150,46 @@ class DatasetMapper:
             dataset_dict["file_name"], format=self.img_format)
         # cv2.imshow("hello",image)
         utils.check_image_size(dataset_dict, image)
+        
+        origin_shape = image.shape[:2]
+        
+        if self.keep_size_and_crop:
+            ignore_polys = [np.array(obj["poly"]).reshape(-1, 2) for obj in dataset_dict[
+                "annotations"] if obj["ignore"] == 1]
+            
+            polys=[np.array(obj["poly"]).reshape(-1, 2) for obj in dataset_dict[
+                "annotations"] if obj["ignore"] == 0]
+            
+            if ignore_polys:
+                dataset_dict["ignore_polys"] = ignore_polys
+
+            if "segm_file" in dataset_dict:
+                with PathManager.open(dataset_dict.pop("segm_file"), "rb") as f:
+                    segm_gt = Image.open(f)
+
+                    segm_gt = np.asarray(segm_gt, dtype="uint8")
+
+                    segm_shape = segm_gt.shape[0:2]
+
+            mask = np.ones(origin_shape)
+
+            if "ignore_polys" in dataset_dict:
+
+                for poly in dataset_dict["ignore_polys"]:
+                    poly = np.array(poly, np.int32)
+                    poly = poly.reshape(-1, 2)
+                    cv2.fillPoly(mask, [poly], 0)
+            
+            image, segm_gt, mask, scale = self.data_croper(image, polys, segm_gt, mask)
+
+            dataset_dict["sem_seg"] = torch.as_tensor(
+                segm_gt.astype("float32")/255.)
+            
+            dataset_dict["image"] = torch.as_tensor(
+                image.transpose(2, 0, 1).astype("float32"))
+            dataset_dict["mask"] = torch.as_tensor(mask)
+            return dataset_dict
+
         # draw image
         # for anno in dataset_dict['annotations']:
         #     bbox = anno['bbox']
@@ -157,8 +202,10 @@ class DatasetMapper:
         # cv2.imwrite('result.jpg',image)
         # import pdb;
         # pdb.set_trace()
-        origin_shape = image.shape[:2]
+        
         if "annotations" not in dataset_dict:
+
+            print("with not crop")
             image, transforms = T.apply_transform_gens(
                 ([self.crop_gen] if self.crop_gen else []) + self.tfm_gens, image
             )
@@ -166,6 +213,7 @@ class DatasetMapper:
             # Crop around an instance if there are instances in the image.
             # USER: Remove if you don't use cropping
             if self.crop_gen:
+
                 crop_tfm = utils.gen_crop_transform_with_instance(
                     self.crop_gen.get_crop_size(image.shape[:2]),
                     image.shape[:2],

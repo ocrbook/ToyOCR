@@ -1,6 +1,6 @@
 MODEL:
-  #WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
-  #WEIGHTS: 'exp_results/final/model_final.pth' #'exp_results/layout_exp_R50_SGD/model_final.pth'
+  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  #WEIGHTS: 'exp_results/toydet_exp_R50/model_final.pth' #'exp_results/layout_exp_R50_SGD/model_final.pth'
 
   META_ARCHITECTURE: "ToyDet"
   BN_TYPE: "BN"
@@ -15,7 +15,7 @@ MODEL:
     DECONV_CHANNEL: [2048, 256, 128, 64]
     DECONV_KERNEL: [4, 4, 4]
     NUM_CLASSES: 1
-    MODULATE_DEFORM: True
+    MODULATE_DEFORM: True 
     BIAS_VALUE: -2.19
     DOWN_SCALE: 4
     MIN_OVERLAP: 0.3
@@ -31,19 +31,19 @@ DATASETS:
   TEST: ("icdar15_test",)
 
 SOLVER:
-  IMS_PER_BATCH: 72 
-  WARMUP_ITERS: 10 
+  IMS_PER_BATCH: 3
+  WARMUP_ITERS: 1 
   STEPS: (40, 80)
   MAX_ITER: 160
-  BASE_LR: 0.001 #5e-4
+  BASE_LR: 2e-2
   LR_SCHEDULER_NAME: "WarmupCosineAnnealingLR"
   COSINE_DECAY_ITER: 0.6
   SWA:
     ENABLED: True
     ITER: 10
     PERIOD: 1
-    LR_START: 0.002
-    ETA_MIN_LR: 0.0001
+    LR_START: 0.01
+    ETA_MIN_LR: 5e-4
     LR_SCHED: True
 
   OPTIM_NAME: "SGD"
@@ -55,14 +55,13 @@ SOLVER:
 INPUT:
   FORMAT: 'RGB'
   MIN_SIZE_TEST: 0
-
   MAX_SIZE_TEST: 1280
-  MIN_SIZE_TRAIN: (600,800)
+  MIN_SIZE_TRAIN: (768,)
   MAX_SIZE_TRAIN: 1280
-
+  
   CROP:
-    ENABLED: True
-    TYPE: "relative_range"
+    ENABLED: True 
+    TYPE: "crop_keep"
     SIZE: [0.6, 0.6]
 
 OUTPUT_DIR: "exp_results/final"

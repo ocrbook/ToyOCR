@@ -15,6 +15,17 @@ class SingleHead(nn.Module):
         self.out_conv = nn.Conv2d(in_channel, out_channel, kernel_size=1)
         if bias_fill:
             self.out_conv.bias.data.fill_(bias_value)
+        self.feat_conv.apply(self.weights_init)
+        self.out_conv.apply(self.weights_init)
+        self.relu.apply(self.weights_init)
+
+    def weights_init(self, m):
+        classname = m.__class__.__name__
+        if classname.find('Conv') != -1:
+            nn.init.kaiming_normal_(m.weight.data)
+        elif classname.find('BatchNorm') != -1:
+            m.weight.data.fill_(1.)
+            m.bias.data.fill_(1e-4)
 
     def forward(self, x):
         x = self.feat_conv(x)
@@ -33,35 +44,48 @@ class ToyDetHead(nn.Module):
         super(ToyDetHead, self).__init__()
         self.cls_head = SingleHead(
             64,
-            cfg.MODEL.DETNET.NUM_CLASSES,
+            1,
             bias_fill=True,
             bias_value=cfg.MODEL.DETNET.BIAS_VALUE,
         )
         self.ignore_value = -1
         self.loss_weight = 1.0
         self.common_stride = cfg.MODEL.DETNET.COMMON_STRIDE
-        self.seg_head = SingleHead(64, 1)
-        self.loss_func = nn.MSELoss(size_average=False ,reduce=False) 
+
+        self.loss_func = nn.MSELoss(reduce='none')
+        self.balanced_mse = BalanceL1Loss()
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        segm = self.cls_head(x)
-        segm = torch.sigmoid(segm)
+        x = self.cls_head(x)
+        x = self.sigmoid(x)
 
-        return segm
+        return x
 
     def losses(self, predictions, targets, masks):
-        targets = targets.unsqueeze(1)
+
         #print("tag here:",targets.shape)
 
-        predictions = predictions.float()
-        predictions = F.interpolate(
-            predictions, scale_factor=self.common_stride, mode="bilinear", align_corners=True
-        )
-        cur_device = predictions.device
-        targets = targets.to(cur_device)
-        loss = self.loss_func(predictions, targets)
-        loss = torch.mul(loss,masks.float())
-        loss =loss.sum()/masks.sum()
-         
-        
-        return dict(mse_loss=loss)
+        dst_shape = (targets.size(1), targets.size(2))
+        # targets = targets.to(cur_device)
+
+        predictions = F.upsample(
+            input=predictions, size=dst_shape, mode='bilinear')
+
+        # targets = targets.unsqueeze(0)
+        # targets = F.interpolate(
+        #     targets, size=dst_shape, mode="bilinear", align_corners=False
+        # )
+        # targets = targets.squeeze(0)
+
+        # masks = masks.unsqueeze(0)
+        # masks = F.interpolate(
+        #     masks, size=dst_shape, mode="bilinear", align_corners=False
+        # )
+        # masks = masks.squeeze(0)
+
+        # predictions=predictions.squeeze(0)
+        loss = 100*(self.loss_func(predictions, targets)
+                   * masks).sum()/masks.sum()
+
+        return dict(loss=loss)

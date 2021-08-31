@@ -1,3 +1,4 @@
+from .rrc_evaluation_funcs import validate_clockwise_points
 import contextlib
 import copy
 import io
@@ -78,31 +79,32 @@ class TextEvaluator(DatasetEvaluator):
             "score": score
         }
         '''
-        with open(file_path,'r') as fp:
-            datas=json.load(fp)
         
-        image_annos_map=dict()
         
+        if not os.path.isdir(temp_dir):
+            os.mkdir(temp_dir)
+                    
+        with open(file_path, 'r') as fp:
+            datas = json.load(fp)
+
+        image_annos_map = dict()
+
         for d in datas:
-            image_name=d["image_name"]
-            polys=d["polys"]
+            image_name = d["image_name"]
+            polys = d["polys"]
             if image_name in image_annos_map:
                 image_annos_map[image_name].append(polys)
             else:
-                image_annos_map[image_name]=[polys]
-            
-            
-        for image_name,polys_lst in image_annos_map.items():
-         
-            
+                image_annos_map[image_name] = [polys]
+
+        for image_name, polys_lst in image_annos_map.items():
+
             filename = 'res_' + image_name.replace('.jpg', '.txt')
             with open(os.path.join(temp_dir, filename), 'wt') as f:
-                    if len(polys) == 0:
-                        f.write('')
-                    for box in polys_lst:
-                        f.write(','.join(map(str, box)) + '\n')
-        
-        
+                if len(polys) == 0:
+                    continue
+                for box in polys_lst:
+                    f.write(','.join(map(str, box)) + '\n')
 
     def sort_detection(self, temp_dir):
         origin_file = temp_dir
@@ -112,43 +114,9 @@ class TextEvaluator(DatasetEvaluator):
             os.mkdir(output_file)
 
         files = glob.glob(origin_file+'*.txt')
+        print(len(files))
         files.sort()
 
-        for i in files:
-            out = i.replace(origin_file, output_file)
-            fin = open(i, 'r').readlines()
-            fout = open(out, 'w')
-
-            for iline, line in enumerate(fin):
-                cors = line.strip().split(',')
-
-                assert(len(cors) % 2 == 0), 'cors invalid.'
-                pts = [(int(cors[j]), int(cors[j+1]))
-                       for j in range(0, len(cors), 2)]
-                try:
-                    pgt = Polygon(pts)
-                except Exception as e:
-                    print(e)
-                    print(
-                        'An invalid detection in {} line {} is removed ... '.format(i, iline))
-                    continue
-
-                if not pgt.is_valid:
-                    print(
-                        'An invalid detection in {} line {} is removed ... '.format(i, iline))
-                    continue
-
-                pRing = LinearRing(pts)
-                if pRing.is_ccw:
-                    pts.reverse()
-                outstr = ''
-                for ipt in pts[:-1]:
-                    outstr += (str(int(ipt[0]))+',' + str(int(ipt[1]))+',')
-                outstr += (str(int(pts[-1][0]))+',' + str(int(pts[-1][1])))
-                #outstr = outstr+','+str(score)
-                fout.writelines(outstr+'\n')
-
-            fout.close()
         os.chdir(output_file)
 
         def zipdir(path, ziph):
@@ -163,7 +131,7 @@ class TextEvaluator(DatasetEvaluator):
         os.chdir("../")
         # clean temp files
         shutil.rmtree(origin_file)
-        shutil.rmtree(output_file)
+        # shutil.rmtree(output_file)
         return "det.zip"
 
     def evaluate_with_official_code(self, result_path, gt_path):
@@ -208,7 +176,7 @@ class TextEvaluator(DatasetEvaluator):
         print(text_result["Message"])
 
         return copy.deepcopy(self._results)
-from .rrc_evaluation_funcs import validate_clockwise_points
+
 
 def instances_to_coco_json(instances, image_name):
 
@@ -226,7 +194,7 @@ def instances_to_coco_json(instances, image_name):
         try:
             validate_clockwise_points(format_rbox)
         except Exception as e:
-            print(e,format_rbox)
+            print(e, format_rbox)
             continue
 
         format_rbox = [[format_rbox[0], format_rbox[1]], [format_rbox[2], format_rbox[3]], [

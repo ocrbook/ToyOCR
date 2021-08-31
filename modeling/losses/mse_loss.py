@@ -18,7 +18,7 @@ class MSELoss(nn.Module):
         loss_weight(float,optional):The weight of the loss.Defaults to 1.0
     """
 
-    def __init__(self, reduction='mean', loss_weight=1.0):
+    def __init__(self, reduction='mean', loss_weight=3.):
         super().__init__()
         self.reduction = reduction
         self.loss_weight = loss_weight
@@ -42,7 +42,7 @@ class MSELoss(nn.Module):
     
 
 class BalanceL1Loss(nn.Module):
-    def __init__(self, negative_ratio=3.):
+    def __init__(self, negative_ratio=1.):
         super(BalanceL1Loss, self).__init__()
         self.negative_ratio = negative_ratio
 
