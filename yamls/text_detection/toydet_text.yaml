@@ -1,6 +1,6 @@
 MODEL:
-  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
-  #WEIGHTS: 'exp_results/toydet_exp_R50/model_final.pth' #'exp_results/layout_exp_R50_SGD/model_final.pth'
+  #WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  WEIGHTS: 'exp_results/toydet_exp_R50/model_final.pth' #'exp_results/layout_exp_R50_SGD/model_final.pth'
 
   META_ARCHITECTURE: "ToyDet"
   BN_TYPE: "BN"

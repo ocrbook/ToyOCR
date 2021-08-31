@@ -71,40 +71,40 @@ class TextEvaluator(DatasetEvaluator):
             self._predictions.append(prediction)
 
     def to_eval_format(self, file_path, temp_dir="temp_det_results", cf_th=0.25):
-        '''
-        result = {
-            "image_name": image_name,
-            "category_id": 1,
-            "polys": format_rbox,
-            "score": score
-        }
-        '''
-        
-        
-        if not os.path.isdir(temp_dir):
-            os.mkdir(temp_dir)
-                    
-        with open(file_path, 'r') as fp:
-            datas = json.load(fp)
 
-        image_annos_map = dict()
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+            with open('temp_all_det_cors.txt', 'w') as f2:
+                for ix in range(len(data)):
+                    if data[ix]['score'] > 0.1:
+                        outstr = '{}: '.format(data[ix]['image_name'])
 
-        for d in datas:
-            image_name = d["image_name"]
-            polys = d["polys"]
-            if image_name in image_annos_map:
-                image_annos_map[image_name].append(polys)
-            else:
-                image_annos_map[image_name] = [polys]
+                        for i in range(len(data[ix]['polys'])):
+                            outstr = outstr + \
+                                str(int(data[ix]['polys'][i][0])) + ',' + \
+                                str(int(data[ix]['polys'][i][1])) + ','
+                        outstr = outstr[0:-1]+"\n"
+                        # outstr = outstr + \
+                        #     str(round(data[ix]['score'], 3)) +'\n'
+                        f2.writelines(outstr)
+                f2.close()
+        dirn = temp_dir
+        lsc = [cf_th]
+        fres = open('temp_all_det_cors.txt', 'r').readlines()
+        for isc in lsc:
+            if not os.path.isdir(dirn):
+                os.mkdir(dirn)
 
-        for image_name, polys_lst in image_annos_map.items():
+            for line in fres:
+                line = line.strip()
+                s = line.split(': ')
 
-            filename = 'res_' + image_name.replace('.jpg', '.txt')
-            with open(os.path.join(temp_dir, filename), 'wt') as f:
-                if len(polys) == 0:
-                    continue
-                for box in polys_lst:
-                    f.write(','.join(map(str, box)) + '\n')
+                filename = '{}.txt'.format(s[0].split(".")[0])
+                outName = os.path.join(dirn, filename)
+                with open(outName, 'a') as fout:
+                    fout.writelines(s[1]+'\n')
+
+        os.remove("temp_all_det_cors.txt")
 
     def sort_detection(self, temp_dir):
         origin_file = temp_dir
@@ -114,9 +114,43 @@ class TextEvaluator(DatasetEvaluator):
             os.mkdir(output_file)
 
         files = glob.glob(origin_file+'*.txt')
-        print(len(files))
         files.sort()
 
+        for i in files:
+            out = i.replace(origin_file, output_file)
+            fin = open(i, 'r').readlines()
+            fout = open(out, 'w')
+
+            for iline, line in enumerate(fin):
+                cors = line.strip().split(',')
+
+                assert(len(cors) % 2 == 0), 'cors invalid.'
+                pts = [(int(cors[j]), int(cors[j+1]))
+                       for j in range(0, len(cors), 2)]
+                try:
+                    pgt = Polygon(pts)
+                except Exception as e:
+                    print(e)
+                    print(
+                        'An invalid detection in {} line {} is removed ... '.format(i, iline))
+                    continue
+
+                if not pgt.is_valid:
+                    print(
+                        'An invalid detection in {} line {} is removed ... '.format(i, iline))
+                    continue
+
+                pRing = LinearRing(pts)
+                if pRing.is_ccw:
+                    pts.reverse()
+                outstr = ''
+                for ipt in pts[:-1]:
+                    outstr += (str(int(ipt[0]))+',' + str(int(ipt[1]))+',')
+                outstr += (str(int(pts[-1][0]))+',' + str(int(pts[-1][1])))
+                #outstr = outstr+','+str(score)
+                fout.writelines(outstr+'\n')
+
+            fout.close()
         os.chdir(output_file)
 
         def zipdir(path, ziph):
@@ -131,7 +165,7 @@ class TextEvaluator(DatasetEvaluator):
         os.chdir("../")
         # clean temp files
         shutil.rmtree(origin_file)
-        # shutil.rmtree(output_file)
+        shutil.rmtree(output_file)
         return "det.zip"
 
     def evaluate_with_official_code(self, result_path, gt_path):

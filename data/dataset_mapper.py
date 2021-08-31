@@ -91,6 +91,8 @@ class DatasetMapper:
 
     def __init__(self, cfg, is_train=True):
 
+        self.keep_size_and_crop=False
+        
         if cfg.INPUT.CROP.ENABLED and is_train and cfg.INPUT.CROP.TYPE != "crop_keep":
             self.crop_gen = T.RandomCrop(
                 cfg.INPUT.CROP.TYPE, cfg.INPUT.CROP.SIZE)
