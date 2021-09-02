@@ -1,1 +1,1 @@
-from .pre_process import batch_padding
+from .pre_process import batch_padding,mask_up_dim

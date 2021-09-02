@@ -85,6 +85,7 @@ def load_img_info(files, dataset, out_segm_path):
     assert isinstance(dataset, str)
 
     img_file, gt_file = files
+    
     # read imgs with ignoring orientations
     img = cv2.imread(img_file)
     height, width = img.shape[0:2]
@@ -98,6 +99,8 @@ def load_img_info(files, dataset, out_segm_path):
     else:
         raise NotImplementedError(f'Not support {dataset}')
 
+
+    
     anno_info = []
     polys = []
     for line in gt_list:
@@ -117,7 +120,6 @@ def load_img_info(files, dataset, out_segm_path):
                 and strs[8] == '###') or (dataset == 'icdar2017'
                                           and strs[9] == '###'):
             iscrowd = 1
-            print('ignore text')
 
         area = polygon.area
 
@@ -143,7 +145,7 @@ def load_img_info(files, dataset, out_segm_path):
         height=img.shape[0],
         width=img.shape[1],
         anno_info=anno_info,
-        segm_file=osp.basename(gt_file))
+        segm_file=osp.join(osp.basename(out_segm_path),osp.basename(img_file)))
     return img_info
 
 
@@ -167,12 +169,14 @@ def main():
     out_dir = args.out_dir if args.out_dir else icdar_path
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-
-    segm_path = os.path.join(out_dir, "segms")
-    if not os.path.exists(segm_path):
-        os.makedirs(segm_path)
+    
+    
 
     for split in ["train", "test"]:
+        segm_path = os.path.join(out_dir, split+"_segms")
+        if not os.path.exists(segm_path):
+            os.makedirs(segm_path)
+        
         print(f"{split} phase")
         img_dir = osp.join(icdar_path, split+'_images')
         gt_dir = osp.join(icdar_path, split+'_gts')

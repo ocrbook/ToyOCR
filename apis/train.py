@@ -251,7 +251,7 @@ class Trainer(DefaultTrainer):
         """
         Implement the moco training logic described above.
         """
-        assert self.model.training, "[KDTrainer] base model was changed to eval mode!"
+        assert self.model.training, " base model was changed to eval mode!"
 
         
         start = time.perf_counter()
@@ -265,7 +265,7 @@ class Trainer(DefaultTrainer):
 
         loss_dict = self.model(data)
 
-        losses = sum(loss for loss in loss_dict.values())
+        losses = sum(loss_dict.values())
         #self._detect_anomaly(losses, loss_dict)
         """
         If you need accumulate gradients or something similar, you can

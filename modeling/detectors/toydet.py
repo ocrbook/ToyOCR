@@ -16,12 +16,13 @@ from ..necks import FPNDeconv
 from ..decoders import toydet_decode
 from ..losses import BalanceL1Loss, mse_loss
 
-from ..utils import batch_padding
+from ..utils import batch_padding, mask_up_dim
 from torch.nn import functional as F
 
 __all__ = ["ToyDet"]
 
-DEBUG = False
+DEBUG = True
+count = 0
 
 
 @META_ARCH_REGISTRY.register()
@@ -57,6 +58,8 @@ class ToyDet(nn.Module):
         self.to(self.device)
 
     def forward(self, batched_inputs):
+        global count
+        count += 1
         """
         Args:
             batched_inputs(list): batched outputs of :class:`DatasetMapper` .
@@ -72,30 +75,34 @@ class ToyDet(nn.Module):
         """
         copy_imgs = batched_inputs.copy()
 
+        file_name = batched_inputs[0]["file_name"]
+
         images = self.preprocess_image(batched_inputs)
 
         if not self.training:
             # return self.inference(images)
             rets = self.inference(images, batched_inputs)
-            if DEBUG:
-                for batch, result in zip(copy_imgs, rets):
-                    img = batch["image"]
+            if not DEBUG:
+                return rets
 
-                    img = img.cpu().detach().numpy().transpose((1, 2, 0))
+            for batch, result in zip(copy_imgs, rets):
+                img = batch["image"]
 
-                    img = img[:, :, ::-1]
-                    img = img.astype(np.int8)
+                img = img.cpu().detach().numpy().transpose((1, 2, 0))
 
-                    # img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
-                    instances = result["instances"]
-                    rboxes = instances.rboxes
+                #img = img[:, :, ::-1]
+                img = img.astype(np.int8)
 
-                    for rbox in rboxes:
-                        rbox = np.array(rbox, np.int)
-                        img = cv2.polylines(
-                            img, [rbox], True, color=(0, 0, 155), thickness=2)
-                    # cv2.imshow("hi",img)
-                    # cv2.waitKey(0)
+                # img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+                instances = result["instances"]
+                rboxes = instances.rboxes
+
+                for rbox in rboxes:
+                    rbox = np.array(rbox, np.int)
+                    img = cv2.polylines(
+                        img, [rbox], True, color=(0, 0, 155), thickness=2)
+                cv2.waitKey(0)
+
             return rets
 
         image_shape = images.tensor.shape[-2:]
@@ -105,35 +112,47 @@ class ToyDet(nn.Module):
         gt_segm = ImageList.from_tensors(
             gt_segm, 32, 0).tensor
 
-        if DEBUG:
-            segm_show = (gt_segm[0].detach().cpu().numpy()
-                         * 255).astype(np.uint8)
-            x, y = segm_show.shape[0:2]
-            segm_show = cv2.resize(segm_show, (int(y/4), int(x/4)))
-            cv2.imshow("gt_segm", segm_show)
-
         mask = [x["mask"].to(self.device) for x in batched_inputs]
 
         mask = ImageList.from_tensors(
             mask, 32, 0).tensor
-        if DEBUG:
-            mask_show = (mask[0].detach().cpu().numpy()*255).astype(np.uint8)
-
-            x, y = mask_show.shape[0:2]
-            mask_show = cv2.resize(mask_show, (int(y/4), int(x/4)))
-            cv2.imshow("mask", mask_show)
 
         features = self.backbone(images.tensor)
 
         up_fmap = self.upsample(features)
+
         preds = self.head(up_fmap)
 
-        if DEBUG:
-            img_show = preds[0].detach().cpu().numpy()[0]
+        if DEBUG and count % 10 == 0:
 
-            cv2.imshow("det", (img_show*255).astype(np.uint8))
+            img = copy_imgs[0]["image"]
+            img = img.cpu().detach().numpy().transpose((1, 2, 0)).astype(np.uint8)
+
+            segm_show = (gt_segm[0].detach().cpu().numpy()
+                         * 255).astype(np.uint8)
+
+            pred_show = (preds[0].detach().cpu().numpy()
+                         * 255).astype(np.uint8)[0]
+
+            mask_show = (mask[0].detach().cpu().numpy()*255).astype(np.uint8)
+
+            new_pred_show = mask_up_dim(pred_show)
+
+            new_segm_show = mask_up_dim(segm_show, ratio=1)
+
+            new_mask_show = mask_up_dim(mask_show, ratio=1)
+
+            show = np.hstack(
+                (img, new_segm_show, new_mask_show, new_pred_show))
+            show = show.astype(np.uint8)
+            show = cv2.resize(show, (256*4, 256))
+            font = cv2.FONT_HERSHEY_SIMPLEX
+
+            show = cv2.putText(show, file_name, (20, 230),
+                               font, 0.7, (255, 255, 255), 1)
+
+            cv2.imshow("show", show)
             cv2.waitKey(2)
-
 
         loss_segm = self.head.losses(preds, gt_segm, mask)
 
@@ -144,6 +163,11 @@ class ToyDet(nn.Module):
         features = self.backbone(images.tensor)
         up_fmap = self.upsample(features)
         preds = self.head(up_fmap)
+
+        # if DEBUG:
+        #     pred_show = preds[0].detach().cpu().numpy()[0]
+        #     cv2.imshow("det", (pred_show*255).astype(np.uint8))
+        #     cv2.waitKey(2)
 
         scale_xys = [(batched_inputs[i]['width'] / float(images.image_sizes[i][1]),
                       batched_inputs[i]['height'] / float(images.image_sizes[i][0])) for i in range(0, len(batched_inputs))]
@@ -168,7 +192,6 @@ class ToyDet(nn.Module):
         """
         images = [x["image"].to(self.device) for x in batched_inputs]
         images = [self.normalizer(img / 255.) for img in images]
-        # images = ImageList.from_tensors(images, self.backbone.size_divisibility)
         images = ImageList.from_tensors(images, 32)
         return images
 

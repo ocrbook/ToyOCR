@@ -3,6 +3,7 @@ import torch
 from torch.nn import functional as F
 from enum import Enum
 import numpy as np
+import cv2
 
 def batch_padding(batch_images,
                   div=32,
@@ -19,14 +20,15 @@ def batch_padding(batch_images,
                 for size in [tuple(img.shape) for img in batch_images]
             ]
         )
-            .max(0)
-            .values
+        .max(0)
+        .values
     )
 
     if div > 1:
         stride = div
         # the last two dims are H,W, both subject to divisibility requirement
-        max_size = torch.cat([max_size[:-2], (max_size[-2:] + (stride - 1)) // stride * stride])
+        max_size = torch.cat(
+            [max_size[:-2], (max_size[-2:] + (stride - 1)) // stride * stride])
 
     image_sizes = [tuple(im.shape[-2:]) for im in batch_images]
 
@@ -34,7 +36,8 @@ def batch_padding(batch_images,
         # This seems slightly (2%) faster.
         # TODO: check whether it's faster for multiple images as well
         image_size = image_sizes[0]
-        padding_size = [0, max_size[-1] - image_size[1], 0, max_size[-2] - image_size[0]]
+        padding_size = [0, max_size[-1] - image_size[1],
+                        0, max_size[-2] - image_size[0]]
         if all(x == 0 for x in padding_size):  # https://github.com/pytorch/pytorch/issues/31734
             batched_imgs = batch_images[0].unsqueeze(0)
         else:
@@ -48,8 +51,6 @@ def batch_padding(batch_images,
             pad_img[..., : img.shape[-2], : img.shape[-1]].copy_(img)
 
     return batched_imgs
-
- 
 
 
 def create_text_labels(classes, scores, class_names, is_crowd=None):
@@ -72,12 +73,20 @@ def create_text_labels(classes, scores, class_names, is_crowd=None):
         if labels is None:
             labels = ["{:.0f}%".format(s * 100) for s in scores]
         else:
-            labels = ["{} {:.0f}%".format(l, s * 100) for l, s in zip(labels, scores)]
+            labels = ["{} {:.0f}%".format(l, s * 100)
+                      for l, s in zip(labels, scores)]
     if labels is not None and is_crowd is not None:
-        labels = [l + ("|crowd" if crowd else "") for l, crowd in zip(labels, is_crowd)]
+        labels = [l + ("|crowd" if crowd else "")
+                  for l, crowd in zip(labels, is_crowd)]
     return labels
 
 
+def mask_up_dim(img, ratio=4):
+    x, y = img.shape[0:2]
+    img = cv2.resize(img, (y*ratio, x*ratio))
+    new_img = np.zeros((y*ratio, x*ratio, 3))
+    new_img[:, :, 0] = img
+    return new_img
 
 
 class Color(Enum):
@@ -92,6 +101,3 @@ class Color(Enum):
     magenta = (255, 0, 255)
     white = (255, 255, 255)
     black = (0, 0, 0)
-
-
-

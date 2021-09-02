@@ -44,10 +44,8 @@ def load_coco_text_instances(json_file, image_root, class_names):
             "width": img['width'],
         }
         instances = []
-        if "train_images" in r["file_name"]:
-            segm_file_name = r["file_name"].replace("train_images", "segms")
-        else:
-            segm_file_name = r["file_name"].replace("images", "segms")
+       
+        segm_file_name = r["file_name"].replace("images", "segms")
 
         if os.path.exists(segm_file_name):
             r["segm_file"] = segm_file_name

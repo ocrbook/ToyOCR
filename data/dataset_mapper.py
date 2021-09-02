@@ -91,8 +91,8 @@ class DatasetMapper:
 
     def __init__(self, cfg, is_train=True):
 
-        self.keep_size_and_crop=False
-        
+        self.keep_size_and_crop = False
+
         if cfg.INPUT.CROP.ENABLED and is_train and cfg.INPUT.CROP.TYPE != "crop_keep":
             self.crop_gen = T.RandomCrop(
                 cfg.INPUT.CROP.TYPE, cfg.INPUT.CROP.SIZE)
@@ -151,17 +151,18 @@ class DatasetMapper:
         image = utils.read_image(
             dataset_dict["file_name"], format=self.img_format)
         # cv2.imshow("hello",image)
+        # cv2.waitKey(2)
         utils.check_image_size(dataset_dict, image)
-        
+
         origin_shape = image.shape[:2]
-        
+
         if self.keep_size_and_crop:
             ignore_polys = [np.array(obj["poly"]).reshape(-1, 2) for obj in dataset_dict[
                 "annotations"] if obj["ignore"] == 1]
-            
-            polys=[np.array(obj["poly"]).reshape(-1, 2) for obj in dataset_dict[
+
+            polys = [np.array(obj["poly"]).reshape(-1, 2) for obj in dataset_dict[
                 "annotations"] if obj["ignore"] == 0]
-            
+
             if ignore_polys:
                 dataset_dict["ignore_polys"] = ignore_polys
 
@@ -181,12 +182,13 @@ class DatasetMapper:
                     poly = np.array(poly, np.int32)
                     poly = poly.reshape(-1, 2)
                     cv2.fillPoly(mask, [poly], 0)
-            
-            image, segm_gt, mask, scale = self.data_croper(image, polys, segm_gt, mask)
+
+            image, segm_gt, mask, scale = self.data_croper(
+                image, polys, segm_gt, mask)
 
             dataset_dict["sem_seg"] = torch.as_tensor(
                 segm_gt.astype("float32")/255.)
-            
+
             dataset_dict["image"] = torch.as_tensor(
                 image.transpose(2, 0, 1).astype("float32"))
             dataset_dict["mask"] = torch.as_tensor(mask)
@@ -204,7 +206,7 @@ class DatasetMapper:
         # cv2.imwrite('result.jpg',image)
         # import pdb;
         # pdb.set_trace()
-        
+
         if "annotations" not in dataset_dict:
 
             print("with not crop")
