@@ -100,7 +100,7 @@ class DatasetMapper:
                 "CropGen used in training: " + str(self.crop_gen))
         elif cfg.INPUT.CROP.ENABLED and is_train and cfg.INPUT.CROP.TYPE == "crop_keep":
             self.keep_size_and_crop = True
-            self.data_croper = T.RandomCroper()
+            self.data_croper = T.RandomCropTransform()
         else:
             self.crop_gen = None
 
@@ -172,13 +172,12 @@ class DatasetMapper:
 
                     segm_gt = np.asarray(segm_gt, dtype="uint8")
 
-                    segm_shape = segm_gt.shape[0:2]
 
             mask = np.ones(origin_shape)
 
             if "ignore_polys" in dataset_dict:
 
-                for poly in dataset_dict["ignore_polys"]:
+                for poly in polys:
                     poly = np.array(poly, np.int32)
                     poly = poly.reshape(-1, 2)
                     cv2.fillPoly(mask, [poly], 0)

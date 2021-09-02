@@ -45,7 +45,7 @@ class ToyDetHead(nn.Module):
     It has three subnet, with a common structure but separate parameters.
     """
 
-    def __init__(self, cfg, ignore_value=-1, inner_channels=64, bias=False, out_channel=1):
+    def __init__(self, cfg, ignore_value=-1, inner_channels=256, bias=False, out_channel=1):
         super(ToyDetHead, self).__init__()
 
         self.inner_channels = inner_channels
@@ -71,7 +71,7 @@ class ToyDetHead(nn.Module):
         self.common_stride = cfg.MODEL.DETNET.COMMON_STRIDE
 
         self.loss_func = nn.MSELoss(reduce='none')
-        # self.balanced_mse = BalanceL1Loss()
+        self.balanced_mse = BalanceL1Loss()
         self.loss = nn.MSELoss()
 
     def weights_init(self, m):
@@ -96,11 +96,12 @@ class ToyDetHead(nn.Module):
         predictions = F.upsample(
              input=predictions, size=dst_shape, mode='bilinear')
 
-        predictions = predictions.squeeze(1)
+        #predictions = predictions.squeeze(1)
+        loss,_=self.balanced_mse(predictions,targets,masks)
         # print(predictions.shape,targets.shape)
         #loss =self.loss(predictions*masks,targets*masks)
         # print(predictions.shape, targets.shape, masks.shape)
-        diff2 = (torch.flatten(predictions) - torch.flatten(targets)) ** 2.0 * torch.flatten(masks)
-        loss = torch.sum(diff2) / torch.sum(masks)
+        # diff2 = (torch.flatten(predictions) - torch.flatten(targets)) ** 2.0 * torch.flatten(masks)
+        # loss = torch.sum(diff2) / torch.sum(masks)
 
         return dict(loss=loss)

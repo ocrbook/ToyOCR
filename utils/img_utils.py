@@ -83,8 +83,9 @@ def draw_mask(polys, height, width):
     """
 
     mask = np.zeros((height, width), np.float32)
-    grad_list = [1.0, 0.9, 0.8, 0.7]
-    score_list = [0.5, 0.7, 0.9, 1.0]
+    gt_mask = np.zeros((height, width), np.float32)
+    grad_list = [1.0, 0.8, 0.6, 0.5]
+    score_list = [0.1, 0.3, 0.8, 1.0]
     for poly in polys:
         for grad, score in zip(grad_list, score_list):
             if grad < 1:
