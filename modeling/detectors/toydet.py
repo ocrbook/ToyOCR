@@ -25,77 +25,11 @@ DEBUG = True
 count = 0
 
 
-class FPNeck(nn.Module):
-    def __init__(self, in_channels=[256, 512, 1024, 2048], inner_channels=256, bias=False, adaptive=False, smooth=False):
-        super().__init__()
-        self.up5 = nn.Upsample(scale_factor=2, mode='nearest')
-        self.up4 = nn.Upsample(scale_factor=2, mode='nearest')
-        self.up3 = nn.Upsample(scale_factor=2, mode='nearest')
-
-        self.in5 = nn.Conv2d(in_channels[-1], inner_channels, 1, bias=bias)
-        self.in4 = nn.Conv2d(in_channels[-2], inner_channels, 1, bias=bias)
-        self.in3 = nn.Conv2d(in_channels[-3], inner_channels, 1, bias=bias)
-        self.in2 = nn.Conv2d(in_channels[-4], inner_channels, 1, bias=bias)
-
-        self.out5 = nn.Sequential(
-            nn.Conv2d(inner_channels, inner_channels //
-                      4, 3, padding=1, bias=bias),
-            nn.Upsample(scale_factor=8, mode='nearest'))
-        self.out4 = nn.Sequential(
-            nn.Conv2d(inner_channels, inner_channels //
-                      4, 3, padding=1, bias=bias),
-            nn.Upsample(scale_factor=4, mode='nearest'))
-        self.out3 = nn.Sequential(
-            nn.Conv2d(inner_channels, inner_channels //
-                      4, 3, padding=1, bias=bias),
-            nn.Upsample(scale_factor=2, mode='nearest'))
-        self.out2 = nn.Conv2d(
-            inner_channels, inner_channels//4, 3, padding=1, bias=bias)
-
-        self.in5.apply(self.weights_init)
-        self.in4.apply(self.weights_init)
-        self.in3.apply(self.weights_init)
-        self.in2.apply(self.weights_init)
-        self.out5.apply(self.weights_init)
-        self.out4.apply(self.weights_init)
-        self.out3.apply(self.weights_init)
-        self.out2.apply(self.weights_init)
-
-    def weights_init(self, m):
-        classname = m.__class__.__name__
-        if classname.find('Conv') != -1:
-            nn.init.kaiming_normal_(m.weight.data)
-        elif classname.find('BatchNorm') != -1:
-            m.weight.data.fill_(1.)
-            m.bias.data.fill_(1e-4)
-
-    def forward(self, features, gt=None, masks=None, training=False):
-
-        c2, c3, c4, c5 = features
-        in5 = self.in5(c5)
-        in4 = self.in4(c4)
-        in3 = self.in3(c3)
-        in2 = self.in2(c2)
-
-        out4 = self.up5(in5) + in4  # 1/16
-        out3 = self.up4(out4) + in3  # 1/8
-        out2 = self.up3(out3) + in2  # 1/4
-
-        p5 = self.out5(in5)
-        p4 = self.out4(out4)
-        p3 = self.out3(out3)
-        p2 = self.out2(out2)
-
-        fuse = torch.cat((p5, p4, p3, p2), 1)
-        return fuse
-
-
 @META_ARCH_REGISTRY.register()
 class ToyDet(nn.Module):
     """
     Implement ToyDet
     """
-
     def __init__(self, cfg):
         super().__init__()
 
@@ -109,15 +43,16 @@ class ToyDet(nn.Module):
         self.max_detections_per_image = cfg.TEST.DETECTIONS_PER_IMAGE
         # fmt: on
         self.backbone = build_backbone(cfg)
-        self.upsample = FPNeck()  # FPNDeconv(cfg)
+        self.upsample = FPNDeconv(cfg)  # FPNDeconv(cfg)
         self.head = ToyDetHead(cfg)
 
         self.mean, self.std = cfg.MODEL.PIXEL_MEAN, cfg.MODEL.PIXEL_STD
-        pixel_mean = torch.Tensor(cfg.MODEL.PIXEL_MEAN).to(
-            self.device).view(3, 1, 1)
-        pixel_std = torch.Tensor(cfg.MODEL.PIXEL_STD).to(
-            self.device).view(3, 1, 1)
+        pixel_mean = torch.Tensor(cfg.MODEL.PIXEL_MEAN).to(self.device).view(
+            3, 1, 1)
+        pixel_std = torch.Tensor(cfg.MODEL.PIXEL_STD).to(self.device).view(
+            3, 1, 1)
         self.normalizer = lambda x: (x - pixel_mean) / pixel_std
+
         self.decoder = toydet_decode.ToyDetDecoder()
 
         self.to(self.device)
@@ -164,8 +99,10 @@ class ToyDet(nn.Module):
 
                 for rbox in rboxes:
                     rbox = np.array(rbox, np.int)
-                    img = cv2.polylines(
-                        img, [rbox], True, color=(0, 0, 155), thickness=2)
+                    img = cv2.polylines(img, [rbox],
+                                        True,
+                                        color=(0, 0, 155),
+                                        thickness=2)
                 # cv2.waitKey(0)
 
             return rets
@@ -174,13 +111,11 @@ class ToyDet(nn.Module):
 
         gt_segm = [x["sem_seg"].to(self.device) for x in batched_inputs]
 
-        gt_segm = ImageList.from_tensors(
-            gt_segm, 32, 0).tensor
+        gt_segm = ImageList.from_tensors(gt_segm, 32, 0).tensor
 
         mask = [x["mask"].to(self.device) for x in batched_inputs]
 
-        mask = ImageList.from_tensors(
-            mask, 32, 0).tensor
+        mask = ImageList.from_tensors(mask, 32, 0).tensor
 
         features = self.backbone(images.tensor)
 
@@ -191,28 +126,26 @@ class ToyDet(nn.Module):
         if DEBUG and count % 10 == 0:
 
             img = copy_imgs[0]["image"]
-            img = img.cpu().detach().numpy().transpose((1, 2, 0)).astype(np.uint8)
+            img = img.cpu().detach().numpy().transpose(
+                (1, 2, 0)).astype(np.uint8)
 
-            segm_show = (gt_segm[0].detach().cpu().numpy()
-                         * 255).astype(np.uint8)
+            segm_show = (gt_segm[0].detach().cpu().numpy() * 255).astype(
+                np.uint8)
 
-            pred_show = (preds[0].detach().cpu().numpy()
-                         * 255).astype(np.uint8)[0]
-
-            mask_show = (mask[0].detach().cpu().numpy()*255).astype(np.uint8)
+            pred_show = (preds[0].detach().cpu().numpy() * 255).astype(
+                np.uint8)[0]
 
             new_pred_show = mask_up_dim(pred_show)
 
             new_segm_show = mask_up_dim(segm_show, ratio=1)
 
-            show = np.hstack(
-                (img, new_segm_show, new_pred_show))
+            show = np.hstack((img, new_segm_show, new_pred_show))
             show = show.astype(np.uint8)
             #show = cv2.resize(show, (256*3, 256))
             font = cv2.FONT_HERSHEY_SIMPLEX
 
-            show = cv2.putText(show, file_name, (20, 490),
-                               font, 0.7, (255, 255, 255), 1)
+            show = cv2.putText(show, file_name, (20, 490), font, 0.7,
+                               (255, 255, 255), 1)
 
             cv2.imshow("show", show)
             cv2.waitKey(2)
@@ -232,13 +165,17 @@ class ToyDet(nn.Module):
         #     cv2.imshow("det", (pred_show*255).astype(np.uint8))
         #     cv2.waitKey(2)
 
-        scale_xys = [(batched_inputs[i]['width'] / float(images.image_sizes[i][1]),
-                      batched_inputs[i]['height'] / float(images.image_sizes[i][0])) for i in range(0, len(batched_inputs))]
+        scale_xys = [
+            (batched_inputs[i]['width'] / float(images.image_sizes[i][1]),
+             batched_inputs[i]['height'] / float(images.image_sizes[i][0]))
+            for i in range(0, len(batched_inputs))
+        ]
 
         results = []
         rbboxes_list, scores_list = self.decoder.decode_batch(
             scale_xys=scale_xys, heats=preds)
-        for image_size, rbboxes, scores in zip(images.image_sizes, rbboxes_list, scores_list):
+        for image_size, rbboxes, scores in zip(images.image_sizes,
+                                               rbboxes_list, scores_list):
 
             result = Instances(image_size)
 
@@ -274,20 +211,23 @@ class ToyDet(nn.Module):
         params = []
         for image in images:
             old_size = image.shape[0:2]
-            ratio = min(float(max_size) / (old_size[i])
-                        for i in range(len(old_size)))
+            ratio = min(
+                float(max_size) / (old_size[i]) for i in range(len(old_size)))
             new_size = tuple([int(i * ratio) for i in old_size])
             resize_image = cv2.resize(image, (new_size[1], new_size[0]))
-            params.append({'width': old_size[1],
-                           'height': old_size[0],
-                           'resized_width': new_size[1],
-                           'resized_height': new_size[0]
-                           })
+            params.append({
+                'width': old_size[1],
+                'height': old_size[0],
+                'resized_width': new_size[1],
+                'resized_height': new_size[0]
+            })
             batch_images.append(resize_image)
-        batch_images = [torch.as_tensor(img.astype("float32").transpose(2, 0, 1))
-                        for img in batch_images]
+        batch_images = [
+            torch.as_tensor(img.astype("float32").transpose(2, 0, 1))
+            for img in batch_images
+        ]
         batch_images = [img.to(self.device) for img in batch_images]
-        batch_images = [self.normalizer(img/255.) for img in batch_images]
+        batch_images = [self.normalizer(img / 255.) for img in batch_images]
         batch_images = batch_padding(batch_images, 32)
         return batch_images, params
 

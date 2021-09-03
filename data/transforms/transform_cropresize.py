@@ -50,7 +50,7 @@ class RandomCropTransform:
         """
 
         assert img.shape[0:2] == segm.shape
-        assert img.shape[0:12] == mask.shape
+        assert img.shape[0:2] == mask.shape
 
         all_care_polys = polys
         crop_x, crop_y, crop_w, crop_h = self._crop_area(img, all_care_polys)
@@ -66,7 +66,7 @@ class RandomCropTransform:
 
             cropped_size = self.size
             if im.ndim > 2:
-                cropped_size = (self.size[1], self.size(1), im.shape[-1])
+                cropped_size = (self.size[1], self.size[0], im.shape[-1])
             cropped_img = np.zeros(cropped_size, im.dtype)
             cropped_img[:h, :w] = cv2.resize(
                 im[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w], (w, h))
