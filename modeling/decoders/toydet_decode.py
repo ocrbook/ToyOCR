@@ -187,28 +187,34 @@ class ToyDetDecoder(object):
         return expanded
 
     def get_mini_boxes(self, contour, shrink=True):
-        rect = cv2.minAreaRect(contour)
-        # if shrink:
-        #     rect = (rect[0], (rect[1][0], rect[1][0]*0.9), rect[2])
-        points = sorted(list(cv2.boxPoints(rect)), key=lambda x: x[0])
+        try:
+            rect = cv2.minAreaRect(contour)
+            # if shrink:
+            #     rect = (rect[0], (rect[1][0], rect[1][0]*0.9), rect[2])
+            points = sorted(list(cv2.boxPoints(rect)), key=lambda x: x[0])
 
-        index_1, index_2, index_3, index_4 = 0, 1, 2, 3
-        if points[1][1] > points[0][1]:
-            index_1 = 0
-            index_4 = 1
-        else:
-            index_1 = 1
-            index_4 = 0
-        if points[3][1] > points[2][1]:
-            index_2 = 2
-            index_3 = 3
-        else:
-            index_2 = 3
-            index_3 = 2
+            index_1, index_2, index_3, index_4 = 0, 1, 2, 3
+            if points[1][1] > points[0][1]:
+                index_1 = 0
+                index_4 = 1
+            else:
+                index_1 = 1
+                index_4 = 0
+            if points[3][1] > points[2][1]:
+                index_2 = 2
+                index_3 = 3
+            else:
+                index_2 = 3
+                index_3 = 2
 
-        box = [points[index_1], points[index_2],
-               points[index_3], points[index_4]]
-        return box, min(rect[1])
+            box = [points[index_1], points[index_2],
+                points[index_3], points[index_4]]
+        
+            return box, min(rect[1])
+        except Exception as e:
+            print(e)
+            print(contour)
+            return [],-1
 
     def box_score_fast(self, bitmap, _box):
         h, w = bitmap.shape[:2]
