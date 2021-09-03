@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) shuchun  and its affiliates.
-import numpy as np
 import cv2
+import numpy as np
 
 """
-Thanks the https://github.com/argman/EAST
+Thanks the https://github.com/MhLiao/DB & https://github.com/argman/EAST
 
 """
 
@@ -21,7 +21,7 @@ class RandomCropTransform:
     In the same time, we also extract the same area mask and gts.
     """
 
-    def __init__(self, crop_size=(512, 512), max_tries=50, min_crop_side_ratio=0.1):
+    def __init__(self, crop_size: tuple = (512, 512), max_tries: int = 50, min_crop_side_ratio: float = 0.1):
         """
         Args:
             crop_size(h,w): dst crop size
@@ -33,7 +33,7 @@ class RandomCropTransform:
         self.min_crop_side_ratio = min_crop_side_ratio
         self.size = crop_size
 
-    def __call__(self, img, polys, segm, mask):
+    def __call__(self, img: np.ndarray, polys: list, segm: np.ndarray, mask: np.ndarray):
         """
         Args:
             img(ndarray): origin image
@@ -49,6 +49,9 @@ class RandomCropTransform:
 
         """
 
+        assert img.shape[0:2] == segm.shape
+        assert img.shape[0:12] == mask.shape
+
         all_care_polys = polys
         crop_x, crop_y, crop_w, crop_h = self._crop_area(img, all_care_polys)
         scale_w = self.size[0] / crop_w
@@ -57,23 +60,25 @@ class RandomCropTransform:
 
         h = int(crop_h * scale)
         w = int(crop_w * scale)
-        crop_img = np.zeros(
-            (self.size[1], self.size[0], img.shape[2]), img.dtype)
-        crop_img[:h, :w] = cv2.resize(
-            img[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w], (w, h))
 
-        crop_segm = np.zeros((self.size[1], self.size[0]), segm.dtype)
-        crop_segm[:h, :w] = cv2.resize(
-            segm[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w], (w, h))
+        rets = []
+        for im in [img, segm, mask]:
 
-        crop_mask = np.zeros(
-            (self.size[1], self.size[0]), mask.dtype)
-        crop_mask[:h, :w] = cv2.resize(
-            mask[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w], (w, h))
+            cropped_size = self.size
+            if im.ndim > 2:
+                cropped_size = (self.size[1], self.size(1), im.shape[-1])
+            cropped_img = np.zeros(cropped_size, im.dtype)
+            cropped_img[:h, :w] = cv2.resize(
+                im[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w], (w, h))
 
-        return crop_img, crop_segm, crop_mask, scale
+            rets.append(cropped_img)
+
+        return rets
 
     def _is_poly_in_rect(self, poly, x, y, w, h):
+        """
+        Check if the poly in the rect.
+        """
         poly = np.array(poly)
         if poly[:, 0].min() < x or poly[:, 0].max() > x + w:
             return False
@@ -82,6 +87,9 @@ class RandomCropTransform:
         return True
 
     def _is_poly_outside_rect(self, poly, x, y, w, h):
+        """
+        Check if the poly out side the rect.
+        """
         poly = np.array(poly)
         if poly[:, 0].max() < x or poly[:, 0].min() > x + w:
             return True
@@ -90,7 +98,9 @@ class RandomCropTransform:
         return False
 
     def _split_regions(self, axis):
-
+        """
+        split the regions 
+        """
         regions = []
         min_axis = 0
 
@@ -102,7 +112,9 @@ class RandomCropTransform:
         return regions
 
     def _random_select(self, axis, max_size):
-        
+        """
+        Random select the min and max value
+        """
         xx = np.random.choice(axis, size=2)
 
         xmin = np.min(xx)
@@ -114,6 +126,9 @@ class RandomCropTransform:
         return xmin, xmax
 
     def _region_wise_random_select(self, regions, max_size):
+        """
+        Random select the region
+        """
         selected_index = list(np.random.choice(len(regions), 2))
 
         selected_values = []
@@ -126,8 +141,11 @@ class RandomCropTransform:
         return min(selected_values), max(selected_values)
 
     def _crop_area(self, img, polys):
-
+        """
+        Random crop the valid area with the polys info
+        """
         h, w, _ = img.shape
+
         h_array = np.zeros(h, dtype=np.int32)
         w_array = np.zeros(w, dtype=np.int32)
 

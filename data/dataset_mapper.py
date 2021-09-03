@@ -182,7 +182,7 @@ class DatasetMapper:
                     poly = poly.reshape(-1, 2)
                     cv2.fillPoly(mask, [poly], 0)
 
-            image, segm_gt, mask, scale = self.data_croper(
+            image, segm_gt, mask = self.data_croper(
                 image, polys, segm_gt, mask)
 
             dataset_dict["sem_seg"] = torch.as_tensor(
@@ -193,18 +193,6 @@ class DatasetMapper:
             dataset_dict["mask"] = torch.as_tensor(mask)
             return dataset_dict
 
-        # draw image
-        # for anno in dataset_dict['annotations']:
-        #     bbox = anno['bbox']
-        #     import cv2
-        #     cv2.rectangle(image,
-        #                   (int(bbox[0]), int(bbox[1])),
-        #                   (int(bbox[2]), int(bbox[3])),
-        #                   (0, 255, 0),
-        #                   2)
-        # cv2.imwrite('result.jpg',image)
-        # import pdb;
-        # pdb.set_trace()
 
         if "annotations" not in dataset_dict:
 
