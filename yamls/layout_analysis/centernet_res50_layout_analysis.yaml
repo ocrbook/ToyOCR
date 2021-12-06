@@ -31,7 +31,7 @@ DATASETS:
   TEST: ("layout_val",)
 
 SOLVER:
-  IMS_PER_BATCH: 320
+  IMS_PER_BATCH: 2
   WARMUP_ITERS: 1
   STEPS: (20, 30)
   MAX_ITER: 40

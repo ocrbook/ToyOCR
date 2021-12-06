@@ -256,7 +256,6 @@ class FPNDeconv(nn.Module):
         in4 = self.in4(c4)
         in3 = self.in3(c3)
         in2 = self.in2(c2)
-        print(in5.shape,in4.shape,in3.shape,in2.shape)
         
         out4 = self.deconv1(in5) + in4  # 1/16
         out3 = self.deconv2(out4) + in3  # 1/8

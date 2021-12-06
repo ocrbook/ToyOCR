@@ -1,1 +1,1 @@
-ps aux|grep det2|awk '{print $2}'|xargs kill -9
+ps aux|grep python|awk '{print $2}'|xargs kill -9

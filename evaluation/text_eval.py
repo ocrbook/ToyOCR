@@ -165,7 +165,7 @@ class TextEvaluator(DatasetEvaluator):
         os.chdir("../")
         # clean temp files
         shutil.rmtree(origin_file)
-        shutil.rmtree(output_file)
+        #shutil.rmtree(output_file)
         return "det.zip"
 
     def evaluate_with_official_code(self, result_path, gt_path):
