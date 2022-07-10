@@ -21,6 +21,8 @@ from detectron2.data.dataset_mapper import DatasetMapper
 from detectron2.data.detection_utils import check_metadata_consistency
 from detectron2.data.samplers import InferenceSampler, RepeatFactorTrainingSampler, TrainingSampler
 
+from .dataset import lmdb_dataset
+
 """
 This file contains the default logic to build a dataloader for training or testing.
 """
@@ -32,6 +34,8 @@ __all__ = [
     "get_detection_dataset_dicts",
     "load_proposals_into_dataset",
     "print_instances_class_histogram",
+    "build_lmdb_recognizer_train_loader",
+    "build_lmdb_recognizer_test_loader",
 ]
 
 
@@ -339,6 +343,30 @@ def build_detection_test_loader(cfg, dataset_name, mapper=None):
     )
     return data_loader
 
+def build_lmdb_recognizer_train_loader(cfg):
+    train_dataset = lmdb_dataset.lmdbDataset(root=cfg.DATASETS.TRAIN_ROOT)
+    sampler = None
+    batch_size = cfg.SOLVER.IMS_PER_BATCH
+    if cfg.DATASETS.RANDOM_SAMPLE:
+        sampler = train_dataset.randomSequentialSampler(train_dataset, batch_size)
+
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=batch_size,
+        shuffle=True, sampler=sampler,
+        num_workers=int(cfg.SOLVER.WORKERS),
+        collate_fn=lmdb_dataset.alignCollate(imgH=cfg.INPUT.IMG_H, imgW=cfg.INPUT.IMG_W, keep_ratio=cfg.INPUT.KEEP_RATIO))
+
+    return train_loader
+
+def build_lmdb_recognizer_test_loader(cfg):
+    test_dataset = lmdb_dataset.lmdbDataset(
+        root=cfg.DATASETS.TEST_ROOT, transform=lmdb_dataset.resizeNormalize((100, 32)))
+
+    batch_size = cfg.SOLVER.IMS_PER_BATCH
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset, shuffle=True, batch_size=batch_size, num_workers=int(cfg.SOLVER.WORKERS))
+
+    return test_loader
 
 def trivial_batch_collator(batch):
     """
