@@ -12,6 +12,7 @@ import logging
 import time
 import os
 from detectron2.data import build_detection_test_loader
+from data import build_lmdb_recognizer_train_loader, build_lmdb_recognizer_test_loader
 
 from detectron2.engine.defaults import DefaultTrainer
 from detectron2.utils import comm
@@ -24,7 +25,7 @@ from modeling import *
 from detectron2.modeling import build_model
 
 
-from data import DatasetMapper, build_detection_train_loader
+from data import DatasetMapper, build_detection_train_loader, lmdb_dataset
 from torchtools.optim import RangerLars
 from solver import WarmupCosineAnnealingLR
 from detectron2.solver import build_lr_scheduler, build_optimizer
@@ -106,10 +107,14 @@ class Trainer(DefaultTrainer):
 
     @classmethod
     def build_test_loader(cls, cfg, dataset_name):
+        if cfg.DATASETS.TYPE == "CRNN":
+            return build_lmdb_recognizer_test_loader(cfg)
         return build_detection_test_loader(cfg, dataset_name, mapper=DatasetMapper(cfg, False))
 
     @classmethod
     def build_train_loader(cls, cfg):
+        if cfg.DATASETS.TYPE == "CRNN":
+            return build_lmdb_recognizer_train_loader(cfg)
         return build_detection_train_loader(cfg, mapper=DatasetMapper(cfg, True))
 
     @classmethod
