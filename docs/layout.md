@@ -23,7 +23,7 @@ GCC 5.4.0 或更高版本
 ### 准备数据
 
 数据我们已经为大家转好格式，下载下来之后，解压放到`datasets`目录即可。
-数据下载: [百度云盘]() 
+链接: https://pan.baidu.com/s/1-luMIvL5sAH36OnhJfAbcg?pwd=us95 提取码: us95 
 
 
 ### 下载代码
