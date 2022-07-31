@@ -84,8 +84,8 @@ class VeryDeepVgg(BaseModule):
 
 @BACKBONE_REGISTRY.register()
 def build_very_deep_vgg(cfg):
-    leaky_relu = cfg.MODEL.BACKBONE.LEAKY_RELU
-    input_channels = cfg.MODEL.BACKBONE.INPUT_CHANNELS
+    leaky_relu = cfg.MODEL.BACKBONE_PARAMS.LEAKY_RELU
+    input_channels = cfg.MODEL.BACKBONE_PARAMS.INPUT_CHANNELS
     model = VeryDeepVgg(leaky_relu, input_channels)
 
     pretrain = cfg.MODEL.BACKBONE.PRETRAIN

@@ -27,22 +27,14 @@ class CRNNet(nn.Module):
         self.device = torch.device(cfg.MODEL.DEVICE)
         self.cfg = cfg
 
-
-        # Inference parameters:
-        self.max_detections_per_image = cfg.TEST.DETECTIONS_PER_IMAGE
         self.backbone = build_backbone(cfg)
 
         crnn_in_channels = cfg.MODEL.CRNN.IN_CHANNELS
-        self.num_classes = cfg.MODEL.CRNN.NUM_CLASSES
+        self.alphabet = cfg.MODEL.ALPHABET
+        self.num_classes = len(self.alphabet) + 1
         self.crnn_decode = crnn_decode.CRNNDecoder(crnn_in_channels, self.num_classes)
         self.loss_func = CTCLoss()
 
-
-        self.mean, self.std = cfg.MODEL.PIXEL_MEAN, cfg.MODEL.PIXEL_STD
-        pixel_mean = torch.Tensor(cfg.MODEL.PIXEL_MEAN).to(self.device).view(3, 1, 1)
-        pixel_std = torch.Tensor(cfg.MODEL.PIXEL_STD).to(self.device).view(3, 1, 1)
-        self.normalizer = lambda x: (x - pixel_mean) / pixel_std
-        self.alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
         self.converter = strLabelConverter(self.alphabet)
         self.to(self.device)
 
@@ -51,7 +43,7 @@ class CRNNet(nn.Module):
 
         if not self.training:
             # return self.inference(images)
-            return self.inference(image, batched_inputs)
+            return self.inference(image)
 
         # image_shape = images.tensor.shape[-2:]
 
@@ -69,6 +61,20 @@ class CRNNet(nn.Module):
         gt_loss = {"loss_ctc": loss_ctc}
         loss = {**loss, **gt_loss}
         return loss
+
+    @torch.no_grad()
+    def inference(self, image):
+        features = self.backbone(image.tensor)
+        preds = self.crnn_decode(features)
+        batch_size = self.cfg.SOLVER.IMS_PER_BATCH
+        preds_size = torch.IntTensor([preds.size(0)] * batch_size)
+        _, preds = preds.max(2)
+        preds = preds.squeeze(2)
+        preds = preds.transpose(1, 0).contiguous().view(-1)
+        sim_preds = self.converter.decode(preds.data, preds_size.data, raw=False)
+        raw_preds = self.converter.decode(preds.data, preds_size.data, raw=True)[:self.cfg.TEST.N_TEST_DISP]
+
+        return sim_preds, raw_preds
 
     def preprocess_image(self, batched_inputs):
         """
