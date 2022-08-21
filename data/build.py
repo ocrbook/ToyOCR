@@ -22,6 +22,8 @@ from detectron2.data.detection_utils import check_metadata_consistency
 from detectron2.data.samplers import InferenceSampler, RepeatFactorTrainingSampler, TrainingSampler
 
 from .dataset import lmdb_dataset
+from .dataset.dataset_360cc import Dataset_360CC
+
 
 """
 This file contains the default logic to build a dataloader for training or testing.
@@ -36,6 +38,7 @@ __all__ = [
     "print_instances_class_histogram",
     "build_lmdb_recognizer_train_loader",
     "build_lmdb_recognizer_test_loader",
+    "build_360cc_recognizer_train_loader",
 ]
 
 
@@ -342,6 +345,18 @@ def build_detection_test_loader(cfg, dataset_name, mapper=None):
         collate_fn=trivial_batch_collator,
     )
     return data_loader
+
+def build_360cc_recognizer_train_loader(cfg):
+    train_dataset = Dataset_360CC(cfg, is_train=True)
+    train_loader = torch.utils.data.DataLoader(
+        dataset=train_dataset,
+        batch_size=cfg.SOLVER.IMS_PER_BATCH,
+        shuffle=cfg.SOLVER.SHUFFLE,
+        num_workers=cfg.SOLVER.WORKERS,
+        pin_memory=cfg.SOLVER.PIN_MEMORY,
+    )
+
+    return train_loader
 
 def build_lmdb_recognizer_train_loader(cfg):
     train_dataset = lmdb_dataset.lmdbDataset(root=cfg.DATASETS.TRAIN_ROOT)

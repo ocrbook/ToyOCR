@@ -1,0 +1,35 @@
+MODEL:
+  META_ARCHITECTURE: "CRNNet"
+  DEVICE: "cuda"
+  CRNN:
+    NAME: 'crnn'
+    IMAGE_SIZE_OW: 280 # origial width: 280
+    IMAGE_SIZE_H: 32
+    IMAGE_SIZE_W: 160   # resized width: 160
+    NUM_CLASSES: 0
+    NUM_HIDDEN: 256
+
+
+DATASETS:
+  TYPE: "360CC"
+  ROOT: "synthetic_chinese/images"
+  CHAR_FILE: 'synthetic_chinese/char_std_5990.txt'
+  JSON_FILE_TRAIN: 'synthetic_chinese/train.txt'
+  JSON_FILE_VAL: 'synthetic_chinese/test.txt'
+  STD: 0.193
+  MEAN: 0.588
+  ALPHABETS: ''
+
+
+SOLVER:
+  IMS_PER_BATCH: 64
+  SHUFFLE: True
+  WORKERS: 4
+  PIN_MEMORY: False
+  STEPS: [60, 80]
+  BASE_LR: 0.0001
+  OPTIMIZER: 'SGD'
+  MAX_ITER: 100
+
+
+

@@ -12,7 +12,7 @@ import logging
 import time
 import os
 from detectron2.data import build_detection_test_loader
-from data import build_lmdb_recognizer_train_loader, build_lmdb_recognizer_test_loader
+from data import build_lmdb_recognizer_train_loader, build_lmdb_recognizer_test_loader, build_360cc_recognizer_train_loader
 
 from detectron2.engine.defaults import DefaultTrainer
 from detectron2.utils import comm
@@ -26,7 +26,7 @@ from detectron2.modeling import build_model
 
 
 from data import DatasetMapper, build_detection_train_loader, lmdb_dataset
-from torchtools.optim import RangerLars
+# from torchtools.optim import RangerLars
 from solver import WarmupCosineAnnealingLR
 from detectron2.solver import build_lr_scheduler, build_optimizer
 from detectron2.solver.build import maybe_add_gradient_clipping
@@ -64,9 +64,13 @@ class Trainer(DefaultTrainer):
         # For training, wrap with DDP. But don't need this for inference.
         if comm.get_world_size() > 1:
             model = DistributedDataParallel(
-                model, device_ids=[comm.get_local_rank()], broadcast_buffers=False,find_unused_parameters=True
+                model, device_ids=[comm.get_local_rank()], broadcast_buffers=False, find_unused_parameters=True
             )
-        super(DefaultTrainer, self).__init__(model, data_loader, optimizer)
+
+        self.model = model
+        self.data_loader = data_loader
+        self.optimizer = optimizer
+        super(DefaultTrainer, self).__init__()#model, data_loader, optimizer)
 
         self.scheduler = self.build_lr_scheduler(cfg, optimizer)
         # Assume no other objects need to be checkpointed.
@@ -113,7 +117,9 @@ class Trainer(DefaultTrainer):
 
     @classmethod
     def build_train_loader(cls, cfg):
-        if cfg.DATASETS.TYPE == "CRNN":
+        if cfg.DATASETS.TYPE == "360CC":
+            return build_360cc_recognizer_train_loader(cfg)
+        elif cfg.DATASETS.TYPE == "lmdb":
             return build_lmdb_recognizer_train_loader(cfg)
         return build_detection_train_loader(cfg, mapper=DatasetMapper(cfg, True))
 
@@ -312,8 +318,12 @@ class Trainer(DefaultTrainer):
         frozen = cfg.is_frozen()
         cfg.defrost()
 
-        iters_per_epoch = len(
-            data_loader.dataset.dataset) // cfg.SOLVER.IMS_PER_BATCH
+        if cfg.DATASETS.TYPE == "360CC":
+            iters_per_epoch = len(data_loader.dataset) // cfg.SOLVER.IMS_PER_BATCH
+        else:
+            iters_per_epoch = len(
+                data_loader.dataset.dataset) // cfg.SOLVER.IMS_PER_BATCH
+        print("iters_per_epoch:", iters_per_epoch)
         cfg.SOLVER.MAX_ITER *= iters_per_epoch
         cfg.SOLVER.WARMUP_ITERS *= iters_per_epoch
         cfg.SOLVER.WARMUP_FACTOR = 1.0 / cfg.SOLVER.WARMUP_ITERS

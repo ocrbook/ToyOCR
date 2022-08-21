@@ -52,6 +52,16 @@ def add_textnet_config(cfg):
 
     _C.MODEL.DETNET.IMGAUG_PROB = 2.0
 
+    # CRNN config
+    _C.MODEL.CRNN = CN()
+    _C.MODEL.CRNN.NAME = "CRNN"
+    _C.MODEL.CRNN.IMAGE_SIZE_OW = 280
+    _C.MODEL.CRNN.IMAGE_SIZE_H = 32
+    _C.MODEL.CRNN.IMAGE_SIZE_W = 160
+    _C.MODEL.CRNN.NUM_CLASSES = 0
+    _C.MODEL.CRNN.NUM_HIDDEN = 256
+
+
     # rewrite backbone
     _C.MODEL.BACKBONE = CN()
     _C.MODEL.BACKBONE.NAME = "build_resnet"
@@ -80,6 +90,22 @@ def add_textnet_config(cfg):
     # input config
     _C.INPUT.FORMAT = "RGB"
     _C.INPUT.RESIZE_TYPE = "ResizeShortestEdge"
+
+    # _C.DATASETS = CN()
+    _C.DATASETS.TYPE = "360CC"
+    _C.DATASETS.CHAR_FILE = ""
+    _C.DATASETS.JSON_FILE_TRAIN = ''
+    _C.DATASETS.JSON_FILE_VAL = ''
+    _C.DATASETS.ROOT = ""
+    _C.DATASETS.MEAN = 0.0
+    _C.DATASETS.STD = 0.0
+    _C.DATASETS.ALPHABETS = ''
+
+
+    _C.SOLVER.SHUFFLE = True
+    _C.SOLVER.WORKERS = 4
+    _C.SOLVER.PIN_MEMORY = False
+    _C.SOLVER.OPTIMIZER = ""
 
 
 def add_centernet_config(cfg):
