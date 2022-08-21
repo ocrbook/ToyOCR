@@ -32,7 +32,7 @@ def setup(args):
     Create configs and perform basic setups.
     """
     cfg = get_cfg()
-    if "toydet" in args.config_file:
+    if "toydet" in args.config_file or "crnn" in args.config_file:
         add_textnet_config(cfg)
     elif "layout" in args.config_file:
         add_centernet_config(cfg)
